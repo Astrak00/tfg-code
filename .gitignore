@@ -1,4 +1,12 @@
 .vscode/
+.DS_Store
+
+# Python Code
+.venv
+__pycache__
+*.pyc
+
+# Report
 
 *.aux
 *.bcf
