@@ -6,6 +6,11 @@
 __pycache__
 *.pyc
 
+# C++
+*.o
+build
+
+
 # Report
 
 *.aux
