@@ -28,4 +28,4 @@ def write_color(color: Color) -> str:
     gbyte = int(256 * interval.clamp(g))
     bbyte = int(256 * interval.clamp(b))
 
-    return f"{rbyte} {gbyte} {bbyte} \n"
+    return f"{rbyte} {gbyte} {bbyte}"
