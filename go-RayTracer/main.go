@@ -64,7 +64,7 @@ func main() {
 	cam := Camera{
 		AspectRatio:     16.0 / 9.0,
 		ImageWidth:      400,
-		SamplesPerPixel: 10,
+		SamplesPerPixel: 20,
 		MaxDepth:        20,
 
 		Vfov:            20,

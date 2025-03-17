@@ -1,11 +1,11 @@
 python:
-	cd py-RayTracer && \
+	cd python-RayTracer && \
 	{ time python3 main.py > ../py-RayTracer.ppm; } 2> ../py-RayTracer.time && \
 	tail -n 4 ../py-RayTracer.time > ../py-RayTracer.time.tmp && mv ../py-RayTracer.time.tmp ../py-RayTracer.time && \
 	cd ..
 
 pypy:
-	cd py-RayTracer && \
+	cd python-RayTracer && \
 	{ time pypy main.py > ../pypy-RayTracer.ppm; } 2> ../pypy-RayTracer.time && \
 	tail -n 4 ../pypy-RayTracer.time > ../pypy-RayTracer.time.tmp && mv ../pypy-RayTracer.time.tmp ../pypy-RayTracer.time && \
 	cd ..
