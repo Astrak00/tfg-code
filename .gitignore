@@ -6,9 +6,16 @@
 __pycache__
 *.pyc
 
+# Go
+ray-tracer
+
 # C++
 *.o
 build
+
+# General
+*.ppm
+*.time
 
 
 # Report

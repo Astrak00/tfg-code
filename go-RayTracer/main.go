@@ -2,11 +2,20 @@ package main
 
 import (
 	"math/rand"
+	"os"
+	"strconv"
 )
 
-const MAX_CONCURRENT_JOBS = 100
-
 func main() {
+	numThreads := 1
+
+	numThreadsEnv := os.Getenv("OMP_NUM_THREADS")
+	if numThreadsEnv != "" {
+		if numThreadsEnvInt, err := strconv.Atoi(numThreadsEnv); err == nil {
+			numThreads = numThreadsEnvInt
+		}
+	}
+
 	// Initialize world with a large ground Sphere and random smaller Spheres
 	world := HittableList{}
 
@@ -54,16 +63,18 @@ func main() {
 	// Setup and render camera
 	cam := Camera{
 		AspectRatio:     16.0 / 9.0,
-		ImageWidth:      1200,
-		SamplesPerPixel: 40,
+		ImageWidth:      400,
+		SamplesPerPixel: 10,
 		MaxDepth:        20,
+
 		Vfov:            20,
 		LookFrom:        Point3{[3]float64{13, 2, 3}},
 		LookAt:          Point3{[3]float64{0, 0, 0}},
 		Vup:             Vec3{[3]float64{0, 1, 0}},
+		
 		DefocusAngle:    0.6,
 		FocusDist:       10.0,
 	}
 
-	cam.Render(&world)
+	cam.Render(&world, numThreads)
 }

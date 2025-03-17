@@ -111,42 +111,56 @@ func (c *Camera) GetRay(i, j int) Ray {
 }
 
 // Render renders the scene with the given world
-func (c *Camera) Render(world Hittable) {
+func (c *Camera) Render(world Hittable, numThreads int) {
 	c.Initialize()
 
 	// Create image data
 	img := NewImage(c.ImageWidth, c.imageHeight)
 
-	// Add a maximum of goroutines to the pool
-	// This is a simple way to limit the number of concurrent goroutines
-	// without using a channel or sync package
-
-	// Create a wait group to synchronize goroutines
-	var wg sync.WaitGroup
-	waitChan := make(chan struct{}, MAX_CONCURRENT_JOBS)
-	processed_lines := 0
-
-	for j := range c.imageHeight {
-		waitChan <- struct{}{}
-		fmt.Fprintf(os.Stderr, "\rScanlines remaining: %d ", c.imageHeight-j)
-		wg.Add(1)
-		go func(j int) {
-			defer wg.Done()
+	if numThreads == 1 {
+		var processed_lines int
+		for j := range c.imageHeight {
+			fmt.Fprintf(os.Stderr, "\rScanlines remaining: %d ", c.imageHeight-processed_lines)
 			for i := range c.ImageWidth {
 				pixelColor := Color{[3]float64{0, 0, 0}}
-				for _ = range c.SamplesPerPixel {
+				for range c.SamplesPerPixel {
 					r := c.GetRay(i, j)
 					pixelColor = pixelColor.Add(c.rayColor(r, c.MaxDepth, world))
 				}
 				img.SetPixel(i, j, pixelColor.MulScalar(c.pixelSamplesScale))
 			}
 			processed_lines++
-			<-waitChan
-			fmt.Fprintf(os.Stderr, "\rScanlines remaining: %d ", c.imageHeight-processed_lines)
-		}(j)
-	}
+		}
+	} else {
+		// Add a maximum of goroutines to the pool
+		// This is a simple way to limit the number of concurrent goroutines
+		// without using a channel or sync package
 
-	wg.Wait()
+		// Create a wait group to synchronize goroutines
+		var wg sync.WaitGroup
+		waitChan := make(chan struct{}, numThreads)
+		processed_lines := 0
+
+		for j := range c.imageHeight {
+			waitChan <- struct{}{}
+			wg.Add(1)
+			go func(j int) {
+				defer wg.Done()
+				for i := range c.ImageWidth {
+					pixelColor := Color{[3]float64{0, 0, 0}}
+					for range c.SamplesPerPixel {
+						r := c.GetRay(i, j)
+						pixelColor = pixelColor.Add(c.rayColor(r, c.MaxDepth, world))
+					}
+					img.SetPixel(i, j, pixelColor.MulScalar(c.pixelSamplesScale))
+				}
+				processed_lines++
+				<-waitChan
+				fmt.Fprintf(os.Stderr, "\rScanlines remaining: %d ", c.imageHeight-processed_lines)
+			}(j)
+		}
+		wg.Wait()
+	}
 	fmt.Fprintf(os.Stderr, "\rScanlines remaining: 0 ")
 
 	// Write the image to standard output
