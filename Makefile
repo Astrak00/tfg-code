@@ -4,10 +4,22 @@ python:
 	tail -n 4 ../py-RayTracer.time > ../py-RayTracer.time.tmp && mv ../py-RayTracer.time.tmp ../py-RayTracer.time && \
 	cd ..
 
+python-multi:
+	cd python-RayTracer && \
+	{ time MULTITHREADING=1 python3 main.py > ../py-multi-RayTracer.ppm; } 2> ../py-multi-RayTracer.time && \
+	tail -n 4 ../py-multi-RayTracer.time > ../py-multi-RayTracer.time.tmp && mv ../py-multi-RayTracer.time.tmp ../py-multi-RayTracer.time && \
+	cd ..
+
 pypy:
 	cd python-RayTracer && \
 	{ time pypy main.py > ../pypy-RayTracer.ppm; } 2> ../pypy-RayTracer.time && \
 	tail -n 4 ../pypy-RayTracer.time > ../pypy-RayTracer.time.tmp && mv ../pypy-RayTracer.time.tmp ../pypy-RayTracer.time && \
+	cd ..
+
+pypy-multi:
+	cd python-RayTracer && \
+	{ time MULTITHREADING=1 pypy main.py > ../pypy-multi-RayTracer.ppm; } 2> ../pypy-multi-RayTracer.time && \
+	tail -n 4 ../pypy-multi-RayTracer.time > ../pypy-multi-RayTracer.time.tmp && mv ../pypy-multi-RayTracer.time.tmp ../pypy-multi-RayTracer.time && \
 	cd ..
 
 cpp:
@@ -55,13 +67,14 @@ all:
 	@$(MAKE) go-multi
 	@$(MAKE) rust
 	@$(MAKE) pypy
+	@$(MAKE) pypy-multi
 	@$(MAKE) python
+	@$(MAKE) python-multi
 
 	@echo "All implementations completed."
 	@echo "Generated images:"
 	@ls -lh *.ppm
 	@echo "You can view the images using an image viewer."
-
 
 clean:
 	@echo "Cleaning up..."

@@ -61,7 +61,7 @@ func main() {
 	// Setup and render camera
 	cam := Camera{
 		AspectRatio:     16.0 / 9.0,
-		ImageWidth:      1400,
+		ImageWidth:      800,
 		SamplesPerPixel: 50,
 		MaxDepth:        50,
 		Vfov:            20,

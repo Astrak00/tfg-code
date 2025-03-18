@@ -100,7 +100,7 @@ fn main() -> io::Result<()> {
     // Camera
     let mut cam = Camera::new();
     cam.aspect_ratio = 16.0 / 9.0;
-    cam.image_width = 1400;
+    cam.image_width = 800;
     cam.samples_per_pixel = 50; // Less samples for quicker rendering
     cam.max_depth = 50;
     cam.vfov = 20.0;

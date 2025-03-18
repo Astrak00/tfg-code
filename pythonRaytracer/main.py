@@ -1,5 +1,7 @@
 import random
 import math
+import os
+import concurrent.futures
 from vector import Vector
 from ray import Ray
 from hittable import HittableList, Sphere, HitRecord
@@ -69,52 +71,95 @@ def random_scene():
     
     return world
 
+def render_pixel(params):
+    i, j, image_width, image_height, samples_per_pixel, max_depth, camera, world = params
+    pixel_color = Vector(0, 0, 0)
+    for _ in range(samples_per_pixel):
+        u = (i + random.random()) / (image_width - 1)
+        v = (j + random.random()) / (image_height - 1)
+        ray = camera.get_ray(u, v)
+        pixel_color += ray_color(ray, world, max_depth)
+    
+    # Divide the color by the number of samples and gamma-correct for gamma=2.0
+    scale = 1.0 / samples_per_pixel
+    r = math.sqrt(scale * pixel_color.x)
+    g = math.sqrt(scale * pixel_color.y)
+    b = math.sqrt(scale * pixel_color.z)
+    
+    # Return the color as a string
+    return (j, i, f"{int(256 * max(0, min(0.999, r)))} "
+          f"{int(256 * max(0, min(0.999, g)))} "
+          f"{int(256 * max(0, min(0.999, b)))}")
+
 def main():
     # Image
     aspect_ratio = 16.0 / 9.0
-    image_width = 400
+    image_width = 800
     image_height = int(image_width / aspect_ratio)
-    samples_per_pixel = 100
+    samples_per_pixel = 50
     max_depth = 50
-    
+
     # World
     world = random_scene()
-    
+
     # Camera
     lookfrom = Vector(13, 2, 3)
     lookat = Vector(0, 0, 0)
     vup = Vector(0, 1, 0)
     dist_to_focus = 10.0
-    aperture = 0.1
-    
+    aperture = 0.6
+
     camera = Camera(lookfrom, lookat, vup, 20, aspect_ratio, aperture, dist_to_focus)
-    
+
+    # Determine whether to use multithreading
+    multithreading = os.environ.get('MULTITHREADING', '') != ''
+    num_threads = os.cpu_count() if multithreading else 1
+
     # Render
     print(f"P3\n{image_width} {image_height}\n255")
     
-    for j in range(image_height-1, -1, -1):
-        for i in range(image_width):
-            pixel_color = Vector(0, 0, 0)
-            for s in range(samples_per_pixel):
-                u = (i + random.random()) / (image_width - 1)
-                v = (j + random.random()) / (image_height - 1)
-                ray = camera.get_ray(u, v)
-                pixel_color += ray_color(ray, world, max_depth)
+    if num_threads > 1:
+        # Multithreaded rendering
+        pixels = []
+        with concurrent.futures.ProcessPoolExecutor(max_workers=num_threads) as executor:
+            # Prepare parameters for all pixels
+            pixel_params = []
+            for j in range(image_height-1, -1, -1):
+                for i in range(image_width):
+                    pixel_params.append((i, j, image_width, image_height, samples_per_pixel, max_depth, camera, world))
             
-            # Divide the color by the number of samples and gamma-correct for gamma=2.0
-            r = pixel_color.x
-            g = pixel_color.y
-            b = pixel_color.z
-            
-            scale = 1.0 / samples_per_pixel
-            r = math.sqrt(scale * r)
-            g = math.sqrt(scale * g)
-            b = math.sqrt(scale * b)
-            
-            # Write the translated [0,255] value of each color component
-            print(f"{int(256 * max(0, min(0.999, r)))} "
-                  f"{int(256 * max(0, min(0.999, g)))} "
-                  f"{int(256 * max(0, min(0.999, b)))}")
+            # Process pixels in parallel and collect results
+            pixels = list(executor.map(render_pixel, pixel_params))
+        
+        # Sort the pixels by their position (j, i) and print them in order
+        pixels.sort()  # Will sort by j (row) first, then by i (column)
+        for _, _, color_str in pixels:
+            print(color_str)
+    else:
+        # Single-threaded rendering (original code)
+        for j in range(image_height-1, -1, -1):
+            for i in range(image_width):
+                pixel_color = Vector(0, 0, 0)
+                for _ in range(samples_per_pixel):
+                    u = (i + random.random()) / (image_width - 1)
+                    v = (j + random.random()) / (image_height - 1)
+                    ray = camera.get_ray(u, v)
+                    pixel_color += ray_color(ray, world, max_depth)
+                
+                # Divide the color by the number of samples and gamma-correct for gamma=2.0
+                r = pixel_color.x
+                g = pixel_color.y
+                b = pixel_color.z
+                
+                scale = 1.0 / samples_per_pixel
+                r = math.sqrt(scale * r)
+                g = math.sqrt(scale * g)
+                b = math.sqrt(scale * b)
+                
+                # Write the translated [0,255] value of each color component
+                print(f"{int(256 * max(0, min(0.999, r)))} "
+                      f"{int(256 * max(0, min(0.999, g)))} "
+                      f"{int(256 * max(0, min(0.999, b)))}")
 
 if __name__ == "__main__":
     main()
