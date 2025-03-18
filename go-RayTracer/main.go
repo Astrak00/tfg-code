@@ -3,17 +3,15 @@ package main
 import (
 	"math/rand"
 	"os"
-	"strconv"
+	"runtime"
 )
 
 func main() {
 	numThreads := 1
 
-	numThreadsEnv := os.Getenv("OMP_NUM_THREADS")
+	numThreadsEnv := os.Getenv("MULTITHREADING")
 	if numThreadsEnv != "" {
-		if numThreadsEnvInt, err := strconv.Atoi(numThreadsEnv); err == nil {
-			numThreads = numThreadsEnvInt
-		}
+		numThreads = runtime.NumCPU()
 	}
 
 	// Initialize world with a large ground Sphere and random smaller Spheres
@@ -67,13 +65,13 @@ func main() {
 		SamplesPerPixel: 50,
 		MaxDepth:        50,
 		Vfov:            20,
-		
-		LookFrom:        Point3{[3]float64{13, 2, 3}},
-		LookAt:          Point3{[3]float64{0, 0, 0}},
-		Vup:             Vec3{[3]float64{0, 1, 0}},
-		
-		DefocusAngle:    0.6,
-		FocusDist:       10.0,
+
+		LookFrom: Point3{[3]float64{13, 2, 3}},
+		LookAt:   Point3{[3]float64{0, 0, 0}},
+		Vup:      Vec3{[3]float64{0, 1, 0}},
+
+		DefocusAngle: 0.6,
+		FocusDist:    10.0,
 	}
 
 	cam.Render(&world, numThreads)

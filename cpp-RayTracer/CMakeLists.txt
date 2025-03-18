@@ -8,6 +8,19 @@ cmake_minimum_required ( VERSION 3.1.0...3.27.0 )
 
 project ( RTWeekend LANGUAGES CXX )
 
+
+# Add an option to enable or disable OpenMP
+option(ENABLE_OPENMP "Enable OpenMP support" OFF)
+
+# Conditionally add -fopenmp to the release flags
+if (ENABLE_OPENMP)
+    message(STATUS "--> OpenMP is enabled")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fopenmp")
+else()
+    message(STATUS "--> OpenMP is disabled")
+endif()
+
+
 # Set to C++11
 set ( CMAKE_CXX_STANDARD          11 )
 set ( CMAKE_CXX_STANDARD_REQUIRED ON )
@@ -59,10 +72,11 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options(-Wunused-variable) # Variable is defined but unused
 endif()
 
+
+
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -fopenmp -O3 -ffast-math -mtune=native -march=native -DNDEBUG")
 
 message (STATUS "Release flags: " ${CMAKE_CXX_FLAGS_RELEASE})
-message (STATUS "Debug flags: " ${CMAKE_CXX_FLAGS_DEBUG})
 
 # Executables
 add_executable(inOneWeekend      ${EXTERNAL} ${SOURCE_ONE_WEEKEND})

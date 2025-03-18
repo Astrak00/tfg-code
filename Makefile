@@ -12,9 +12,18 @@ pypy:
 
 cpp:
 	cd cpp-RayTracer && \
-	cmake -B build && cmake --build build && \
+	cmake -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_OPENMP=OFF && cmake --build build -j && \
+	echo "Running C++ Ray Tracer..." && \
 	{ time ./build/inOneWeekend > ../cpp-RayTracer.ppm; } 2> ../cpp-RayTracer.time && \
 	tail -n 4 ../cpp-RayTracer.time > ../cpp-RayTracer.time.tmp && mv ../cpp-RayTracer.time.tmp ../cpp-RayTracer.time && \
+	cd ..
+
+cpp-multi:
+	cd cpp-RayTracer && \
+	cmake -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_OPENMP=ON && cmake --build build -j && \
+	echo "Running C++ Ray Tracer..." && \
+	{ time ./build/inOneWeekend > ../cpp-multi-RayTracer.ppm; } 2> ../cpp-multi-RayTracer.time && \
+	tail -n 4 ../cpp-multi-RayTracer.time > ../cpp-multi-RayTracer.time.tmp && mv ../cpp-multi-RayTracer.time.tmp ../cpp-multi-RayTracer.time && \
 	cd ..
 
 go:
@@ -24,19 +33,28 @@ go:
 	tail -n 4 ../go-RayTracer.time > ../go-RayTracer.time.tmp && mv ../go-RayTracer.time.tmp ../go-RayTracer.time && \
 	cd ..
 
-go-100:
+go-multi:
 	cd go-RayTracer && \
-	go build && \
-	{ time OMP_NUM_THREADS=10 ./ray-tracer > ../go-RayTracer-10.ppm; } 2> ../go-RayTracer-10.time && \
-	tail -n 4 ../go-RayTracer-10.time > ../go-RayTracer-10.time.tmp && mv ../go-RayTracer-10.time.tmp ../go-RayTracer-10.time && \
+	go build -tags openmp && \
+	{ time MULTITHREADING=1 ./ray-tracer > ../go-multi-RayTracer.ppm; } 2> ../go-multi-RayTracer.time && \
+	tail -n 4 ../go-multi-RayTracer.time > ../go-multi-RayTracer.time.tmp && mv ../go-multi-RayTracer.time.tmp ../go-multi-RayTracer.time && \
+	cd ..
+
+rust:
+	cd rust-RayTracer && \
+	cargo build --release && \
+	{ time ./target/release/ray-tracer > ../rust-RayTracer.ppm; } 2> ../rust-RayTracer.time && \
+	tail -n 4 ../rust-RayTracer.time > ../rust-RayTracer.time.tmp && mv ../rust-RayTracer.time.tmp ../rust-RayTracer.time && \
 	cd ..
 
 all:
 	@echo "Running all implementations..."
 	@$(MAKE) cpp
+	@$(MAKE) cpp-multi
 	@$(MAKE) go
+	@$(MAKE) go-multi
+	@$(MAKE) rust
 	@$(MAKE) pypy
-	@$(MAKE) go-10
 	@$(MAKE) python
 
 	@echo "All implementations completed."

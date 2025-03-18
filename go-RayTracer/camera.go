@@ -118,9 +118,8 @@ func (c *Camera) Render(world Hittable, numThreads int) {
 	img := NewImage(c.ImageWidth, c.imageHeight)
 
 	if numThreads == 1 {
-		var processed_lines int
 		for j := range c.imageHeight {
-			fmt.Fprintf(os.Stderr, "\rScanlines remaining: %d ", c.imageHeight-processed_lines)
+			fmt.Fprintf(os.Stderr, "\rScanlines remaining: %d ", c.imageHeight-j)
 			for i := range c.ImageWidth {
 				pixelColor := Color{[3]float64{0, 0, 0}}
 				for range c.SamplesPerPixel {
@@ -129,7 +128,6 @@ func (c *Camera) Render(world Hittable, numThreads int) {
 				}
 				img.SetPixel(i, j, pixelColor.MulScalar(c.pixelSamplesScale))
 			}
-			processed_lines++
 		}
 	} else {
 		// Add a maximum of goroutines to the pool
