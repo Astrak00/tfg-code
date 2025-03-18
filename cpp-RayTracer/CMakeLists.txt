@@ -12,12 +12,8 @@ project ( RTWeekend LANGUAGES CXX )
 set ( CMAKE_CXX_STANDARD          11 )
 set ( CMAKE_CXX_STANDARD_REQUIRED ON )
 set ( CMAKE_CXX_EXTENSIONS        OFF )
+set ( CMAKE_CXX_COMPILER          "clang++" )
 
-# Source
-
-# set ( EXTERNAL
-#   src/external/stb_image.h
-# )
 
 set ( SOURCE_ONE_WEEKEND
   src/main.cc
@@ -62,6 +58,9 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options(-Wsometimes-uninitialized) # Variable improperly initialized
     add_compile_options(-Wunused-variable) # Variable is defined but unused
 endif()
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp -ffast-math -march=native -mtune=native")
+
 
 # Executables
 add_executable(inOneWeekend      ${EXTERNAL} ${SOURCE_ONE_WEEKEND})
