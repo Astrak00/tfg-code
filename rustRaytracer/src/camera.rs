@@ -142,8 +142,7 @@ impl Camera {
         let mut img = Image::new(self.image_width, self.image_height);
 
         if num_threads <= 1 {
-            let mut processed_lines = 0;
-            for j in 0..self.image_height {
+            for (processed_lines, j) in (0..self.image_height).enumerate() {
                 write!(out, "\rScanlines remaining: {} ", self.image_height - processed_lines)?;
                 out.flush()?;
 
@@ -155,7 +154,7 @@ impl Camera {
                     }
                     img.set_pixel(i, j, pixel_color * self.pixel_samples_scale);
                 }
-                processed_lines += 1;
+                // processed_lines += 1;
             }
         } else {
             // Use Rayon for parallel processing
@@ -173,13 +172,13 @@ impl Camera {
             rows.par_iter().for_each(|&j| {
                 let mut row_pixels = vec![Color::new(0.0, 0.0, 0.0); self.image_width];
                 
-                for i in 0..self.image_width {
+                for (pixel, i) in row_pixels.iter_mut().zip(0..) {
                     let mut pixel_color = Color::new(0.0, 0.0, 0.0);
                     for _ in 0..self.samples_per_pixel {
                         let r = self.get_ray(i, j);
                         pixel_color = pixel_color + self.ray_color(&r, self.max_depth, world);
                     }
-                    row_pixels[i] = pixel_color * self.pixel_samples_scale;
+                    *pixel = pixel_color * self.pixel_samples_scale;
                 }
                 
                 // Store the pixel colors in the shared container
@@ -253,4 +252,4 @@ impl Camera {
     }
 }
 
-use crate::{material::Lambertian};
+use crate::material::Lambertian;

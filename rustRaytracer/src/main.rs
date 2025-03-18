@@ -100,16 +100,16 @@ fn main() -> io::Result<()> {
     // Camera
     let mut cam = Camera::new();
     cam.aspect_ratio = 16.0 / 9.0;
-    cam.image_width = 1200;
-    cam.samples_per_pixel = 20;  // Less samples for quicker rendering
+    cam.image_width = 1400;
+    cam.samples_per_pixel = 50; // Less samples for quicker rendering
     cam.max_depth = 50;
     cam.vfov = 20.0;
-    
+
     // Camera position and orientation
     cam.look_from = Point3::new(13.0, 2.0, 3.0);
     cam.look_at = Point3::new(0.0, 0.0, 0.0);
     cam.vup = Vec3::new(0.0, 1.0, 0.0);
-    
+
     // Defocus blur
     cam.defocus_angle = 0.6;
     cam.focus_dist = 10.0;
@@ -119,9 +119,12 @@ fn main() -> io::Result<()> {
     let mut err_lock = stderr.lock();
 
     // Use multiple threads for rendering
-    let num_threads = num_cpus::get();
+    let num_threads = std::env::var("OMP_NUM_THREADS")
+        .ok()
+        .and_then(|val| val.parse::<usize>().ok())
+        .unwrap_or_else(num_cpus::get);
     // println!("Rendering with {} threads", num_threads);
-    
+
     cam.render(&world, &mut err_lock, num_threads)?;
 
     Ok(())

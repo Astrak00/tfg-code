@@ -63,11 +63,11 @@ func main() {
 	// Setup and render camera
 	cam := Camera{
 		AspectRatio:     16.0 / 9.0,
-		ImageWidth:      400,
-		SamplesPerPixel: 20,
-		MaxDepth:        20,
-
+		ImageWidth:      1400,
+		SamplesPerPixel: 50,
+		MaxDepth:        50,
 		Vfov:            20,
+		
 		LookFrom:        Point3{[3]float64{13, 2, 3}},
 		LookAt:          Point3{[3]float64{0, 0, 0}},
 		Vup:             Vec3{[3]float64{0, 1, 0}},
