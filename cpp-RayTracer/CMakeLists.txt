@@ -37,7 +37,7 @@ include_directories(src)
 # different compiler or want to set different compiler options.
 
 message (STATUS "Compiler ID: " ${CMAKE_CXX_COMPILER_ID})
-message (STATUS "Release flags: " ${CMAKE_CXX_FLAGS_RELEASE})
+message (STATUS "Release flags OG: " ${CMAKE_CXX_FLAGS_RELEASE})
 message (STATUS "Debug flags: " ${CMAKE_CXX_FLAGS_DEBUG})
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
@@ -59,8 +59,10 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options(-Wunused-variable) # Variable is defined but unused
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp -ffast-math -march=native -mtune=native")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -fopenmp -O3 -ffast-math -mtune=native -march=native -DNDEBUG")
 
+message (STATUS "Release flags: " ${CMAKE_CXX_FLAGS_RELEASE})
+message (STATUS "Debug flags: " ${CMAKE_CXX_FLAGS_DEBUG})
 
 # Executables
 add_executable(inOneWeekend      ${EXTERNAL} ${SOURCE_ONE_WEEKEND})

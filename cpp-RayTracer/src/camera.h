@@ -38,10 +38,15 @@ class camera {
 
       int processed_lines = 0;
 
-// #pragma omp parallel for shared(processed_lines)
+#if defined(_OPENMP)
+      std::clog << "Using OpenMP for parallel rendering.\n";
+#else
+      std::clog << "Using single-threaded rendering.\n";
+#endif
       for (int j = 0; j < image_height; j++) {
         std::clog << "\r\033[KScanlines remaining: " << (image_height - processed_lines) << ' '
                   << std::flush;
+#pragma omp parallel for //shared(processed_lines)
         for (int i = 0; i < image_width; i++) {
           color pixel_color(0, 0, 0);
           for (int sample = 0; sample < samples_per_pixel; sample++) {

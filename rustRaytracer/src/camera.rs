@@ -224,7 +224,7 @@ impl Camera {
     }
 
     fn ray_color(&self, r: &Ray, depth: usize, world: &dyn Hittable) -> Color {
-        // If we've exceeded the ray bounce limit, no more light is gathered
+        // Explicitly check the depth parameter to avoid Clippy warning
         if depth == 0 {
             return Color::new(0.0, 0.0, 0.0);
         }
