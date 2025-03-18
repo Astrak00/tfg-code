@@ -59,7 +59,7 @@ impl Camera {
             vup: Vec3::new(0.0, 1.0, 0.0),
             defocus_angle: 0.0,
             focus_dist: 10.0,
-            
+
             // These will be initialized later
             image_height: 0,
             pixel_samples_scale: 0.0,
@@ -74,8 +74,6 @@ impl Camera {
             defocus_disk_v: Vec3::new(0.0, 0.0, 0.0),
         }
     }
-
-    
 
     pub fn initialize(&mut self) {
         // Calculate image height
@@ -107,8 +105,8 @@ impl Camera {
         self.pixel_delta_v = viewport_v / self.image_height as f64;
 
         // Calculate the location of the upper left pixel
-        let viewport_upper_left = self.center - self.w * self.focus_dist
-            - viewport_u / 2.0 - viewport_v / 2.0;
+        let viewport_upper_left =
+            self.center - self.w * self.focus_dist - viewport_u / 2.0 - viewport_v / 2.0;
         self.pixel00_loc = viewport_upper_left + (self.pixel_delta_u + self.pixel_delta_v) * 0.5;
 
         // Calculate the camera defocus disk basis vectors
@@ -129,13 +127,18 @@ impl Camera {
         } else {
             self.defocus_disk_sample()
         };
-        
+
         let ray_direction = pixel_sample - ray_origin;
 
         Ray::new(ray_origin, ray_direction)
     }
 
-    pub fn render<W: Write>(&mut self, world: &dyn Hittable, out: &mut W, num_threads: usize) -> io::Result<()> {
+    pub fn render<W: Write>(
+        &mut self,
+        world: &dyn Hittable,
+        out: &mut W,
+        num_threads: usize,
+    ) -> io::Result<()> {
         self.initialize();
 
         // Create image data
@@ -143,7 +146,11 @@ impl Camera {
 
         if num_threads <= 1 {
             for (processed_lines, j) in (0..self.image_height).enumerate() {
-                write!(out, "\rScanlines remaining: {} ", self.image_height - processed_lines)?;
+                write!(
+                    out,
+                    "\rScanlines remaining: {} ",
+                    self.image_height - processed_lines
+                )?;
                 out.flush()?;
 
                 for i in 0..self.image_width {
@@ -159,19 +166,20 @@ impl Camera {
         } else {
             // Use Rayon for parallel processing
             let processed_lines = Arc::new(Mutex::new(0));
-            
+
             // Create a thread-safe container to store all pixel colors
-            let all_pixels: Arc<Mutex<Vec<Color>>> = Arc::new(Mutex::new(
-                vec![Color::new(0.0, 0.0, 0.0); self.image_width * self.image_height]
-            ));
-            
+            let all_pixels: Arc<Mutex<Vec<Color>>> = Arc::new(Mutex::new(vec![
+                    Color::new(0.0, 0.0, 0.0);
+                    self.image_width * self.image_height
+                ]));
+
             // Create a vector of row indices
             let rows: Vec<usize> = (0..self.image_height).collect();
-            
+
             // Process rows in parallel
             rows.par_iter().for_each(|&j| {
                 let mut row_pixels = vec![Color::new(0.0, 0.0, 0.0); self.image_width];
-                
+
                 for (pixel, i) in row_pixels.iter_mut().zip(0..) {
                     let mut pixel_color = Color::new(0.0, 0.0, 0.0);
                     for _ in 0..self.samples_per_pixel {
@@ -180,19 +188,19 @@ impl Camera {
                     }
                     *pixel = pixel_color * self.pixel_samples_scale;
                 }
-                
+
                 // Store the pixel colors in the shared container
                 let mut pixels = all_pixels.lock().unwrap();
                 for i in 0..self.image_width {
                     pixels[j * self.image_width + i] = row_pixels[i];
                 }
-                
+
                 // Update progress
                 let mut count = processed_lines.lock().unwrap();
                 *count += 1;
                 // We don't print here to avoid contention, just count
             });
-            
+
             // After parallel processing, update the image with all the calculated colors
             let pixels = all_pixels.lock().unwrap();
             for j in 0..self.image_height {

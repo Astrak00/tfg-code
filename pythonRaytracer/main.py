@@ -7,7 +7,6 @@ from ray import Ray
 from hittable import HittableList, Sphere, HitRecord
 from material import Lambertian, Metal, Dielectric
 from camera import Camera
-from color import write_color
 
 def ray_color(ray, world, depth):
     hit_record = HitRecord()

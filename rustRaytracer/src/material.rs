@@ -22,12 +22,12 @@ impl Lambertian {
 impl Material for Lambertian {
     fn scatter(&self, _r_in: &Ray, rec: &HitRecord) -> (bool, Color, Ray) {
         let mut scatter_direction = rec.normal + random_unit_vector();
-        
+
         // Catch degenerate scatter direction
         if scatter_direction.near_zero() {
             scatter_direction = rec.normal;
         }
-        
+
         let scattered = Ray::new(rec.p, scatter_direction);
         (true, self.albedo, scattered)
     }
@@ -50,10 +50,7 @@ impl Metal {
 impl Material for Metal {
     fn scatter(&self, r_in: &Ray, rec: &HitRecord) -> (bool, Color, Ray) {
         let reflected = reflect(&r_in.direction(), &rec.normal);
-        let scattered = Ray::new(
-            rec.p,
-            reflected + random_unit_vector() * self.fuzz,
-        );
+        let scattered = Ray::new(rec.p, reflected + random_unit_vector() * self.fuzz);
         let scatter_happened = dot(&scattered.direction(), &rec.normal) > 0.0;
         (scatter_happened, self.albedo, scattered)
     }
@@ -81,7 +78,11 @@ impl Dielectric {
 impl Material for Dielectric {
     fn scatter(&self, r_in: &Ray, rec: &HitRecord) -> (bool, Color, Ray) {
         let attenuation = Color::new(1.0, 1.0, 1.0);
-        let refraction_ratio = if rec.front_face { 1.0 / self.ir } else { self.ir };
+        let refraction_ratio = if rec.front_face {
+            1.0 / self.ir
+        } else {
+            self.ir
+        };
 
         let unit_direction = r_in.direction().length().recip() * r_in.direction();
         let cos_theta = f64::min(dot(&-unit_direction, &rec.normal), 1.0);
