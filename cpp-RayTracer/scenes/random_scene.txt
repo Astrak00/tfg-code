@@ -1,0 +1,71 @@
+# Scene file format:
+# sphere x y z radius material_type [material_params]
+# material_types: lambertian, metal, dielectric
+# lambertian params: r g b (albedo)
+# metal params: r g b fuzz
+# dielectric params: index_of_refraction
+
+# Row 1
+sphere -10.8 0.2 -10.8 0.2 lambertian 0.8 0.3 0.3
+sphere -10.8 0.2 -9.9 0.2 lambertian 0.4 0.5 0.6
+sphere -10.8 0.2 -9.0 0.2 metal 0.8 0.8 0.8 0.2
+sphere -10.8 0.2 -8.1 0.2 lambertian 0.2 0.7 0.3
+sphere -10.8 0.2 -7.2 0.2 metal 0.7 0.6 0.5 0.1
+sphere -10.8 0.2 -6.3 0.2 lambertian 0.1 0.2 0.8
+sphere -10.8 0.2 -5.4 0.2 dielectric 1.5
+sphere -10.8 0.2 -4.5 0.2 lambertian 0.9 0.1 0.1
+sphere -10.8 0.2 -3.6 0.2 metal 0.6 0.6 0.9 0.3
+sphere -10.8 0.2 -2.7 0.2 lambertian 0.7 0.7 0.1
+sphere -10.8 0.2 -1.8 0.2 lambertian 0.2 0.8 0.2
+sphere -10.8 0.2 -0.9 0.2 metal 0.7 0.7 0.7 0.0
+sphere -10.8 0.2 0.0 0.2 lambertian 0.5 0.5 0.5
+sphere -10.8 0.2 0.9 0.2 lambertian 0.3 0.3 0.9
+sphere -10.8 0.2 1.8 0.2 metal 0.8 0.5 0.2 0.2
+sphere -10.8 0.2 2.7 0.2 lambertian 0.4 0.4 0.8
+sphere -10.8 0.2 3.6 0.2 metal 0.9 0.9 0.1 0.1
+sphere -10.8 0.2 4.5 0.2 dielectric 1.5
+sphere -10.8 0.2 5.4 0.2 lambertian 0.1 0.9 0.5
+sphere -10.8 0.2 6.3 0.2 lambertian 0.5 0.2 0.8
+sphere -10.8 0.2 7.2 0.2 metal 0.6 0.8 0.2 0.3
+sphere -10.8 0.2 8.1 0.2 lambertian 0.3 0.5 0.7
+
+# Row 2
+sphere -9.9 0.2 -10.8 0.2 metal 0.7 0.7 0.7 0.1
+sphere -9.9 0.2 -9.9 0.2 dielectric 1.5
+sphere -9.9 0.2 -9.0 0.2 lambertian 0.9 0.3 0.3
+sphere -9.9 0.2 -8.1 0.2 metal 0.5 0.7 0.9 0.2
+sphere -9.9 0.2 -7.2 0.2 lambertian 0.1 0.8 0.5
+sphere -9.9 0.2 -6.3 0.2 lambertian 0.7 0.2 0.2
+sphere -9.9 0.2 -5.4 0.2 metal 0.8 0.8 0.8 0.4
+sphere -9.9 0.2 -4.5 0.2 dielectric 1.5
+sphere -9.9 0.2 -3.6 0.2 lambertian 0.4 0.3 0.7
+sphere -9.9 0.2 -2.7 0.2 metal 0.9 0.6 0.3 0.1
+sphere -9.9 0.2 -1.8 0.2 lambertian 0.2 0.5 0.8
+sphere -9.9 0.2 -0.9 0.2 dielectric 1.5
+sphere -9.9 0.2 0.0 0.2 lambertian 0.6 0.6 0.1
+sphere -9.9 0.2 0.9 0.2 metal 0.5 0.5 0.5 0.0
+sphere -9.9 0.2 1.8 0.2 lambertian 0.8 0.1 0.3
+sphere -9.9 0.2 2.7 0.2 metal 0.7 0.3 0.8 0.3
+sphere -9.9 0.2 3.6 0.2 lambertian 0.1 0.7 0.7
+sphere -9.9 0.2 4.5 0.2 lambertian 0.9 0.9 0.2
+sphere -9.9 0.2 5.4 0.2 metal 0.4 0.4 0.8 0.2
+sphere -9.9 0.2 6.3 0.2 dielectric 1.5
+sphere -9.9 0.2 7.2 0.2 lambertian 0.3 0.6 0.8
+sphere -9.9 0.2 8.1 0.2 lambertian 0.7 0.4 0.3
+
+# And more rows... (adding a sample, add more as needed)
+sphere -9.0 0.2 -10.8 0.2 lambertian 0.5 0.5 0.8
+sphere -9.0 0.2 -9.9 0.2 metal 0.6 0.7 0.2 0.2
+sphere -9.0 0.2 -9.0 0.2 dielectric 1.5
+sphere -9.0 0.2 -8.1 0.2 lambertian 0.2 0.9 0.4
+sphere -9.0 0.2 -7.2 0.2 metal 0.8 0.3 0.6 0.1
+sphere -8.1 0.2 -8.1 0.2 lambertian 0.4 0.8 0.2
+sphere -7.2 0.2 -7.2 0.2 dielectric 1.5
+sphere -6.3 0.2 -6.3 0.2 metal 0.9 0.7 0.3 0.3
+sphere -5.4 0.2 -5.4 0.2 lambertian 0.2 0.2 0.9
+sphere -4.5 0.2 -4.5 0.2 lambertian 0.7 0.1 0.7
+sphere 5.4 0.2 5.4 0.2 metal 0.5 0.8 0.4 0.2
+sphere 6.3 0.2 6.3 0.2 dielectric 1.5
+sphere 7.2 0.2 7.2 0.2 lambertian 0.1 0.5 0.9
+sphere 8.1 0.2 8.1 0.2 metal 0.7 0.7 0.2 0.0
+sphere 9.0 0.2 9.0 0.2 lambertian 0.3 0.3 0.8
