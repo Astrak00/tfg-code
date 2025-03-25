@@ -1,7 +1,7 @@
 use crate::{
     hittable::HitRecord,
     ray::Ray,
-    vec3::{dot, random_unit_vector, reflect, refract, Color},
+    vec3::{dot, random_unit_vector, reflect, refract, Color, unit_vector},
 };
 use rand::Rng;
 
@@ -50,7 +50,7 @@ impl Metal {
 impl Material for Metal {
     fn scatter(&self, r_in: &Ray, rec: &HitRecord) -> (bool, Color, Ray) {
         let reflected = reflect(&r_in.direction(), &rec.normal);
-        let scattered = Ray::new(rec.p, reflected + random_unit_vector() * self.fuzz);
+        let scattered = Ray::new(rec.p, unit_vector(&reflected) + random_unit_vector() * self.fuzz);
         let scatter_happened = dot(&scattered.direction(), &rec.normal) > 0.0;
         (scatter_happened, self.albedo, scattered)
     }

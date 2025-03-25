@@ -1,7 +1,7 @@
 import random
 import math
 from ray import Ray
-from vec3 import dot, random_unit_vector, reflect, refract, Color
+from vec3 import dot, random_unit_vector, reflect, refract, unit_vector, Color
 
 
 class Material:
@@ -30,9 +30,9 @@ class Metal(Material):
         self.albedo = albedo
         self.fuzz = min(fuzz, 1.0)
 
-    def scatter(self, r_in, rec):
+    def scatter(self, r_in: Ray, rec):
         reflected = reflect(r_in.direction, rec.normal)
-        scattered = Ray(rec.p, reflected + random_unit_vector() * self.fuzz)
+        scattered = Ray(rec.p, unit_vector(reflected) + random_unit_vector() * self.fuzz)
         scatter_happened = dot(scattered.direction, rec.normal) > 0
         return scatter_happened, self.albedo, scattered
 
@@ -51,7 +51,7 @@ class Dielectric(Material):
         attenuation = Color(1.0, 1.0, 1.0)
         refraction_ratio = 1.0 / self.ir if rec.front_face else self.ir
 
-        unit_direction = r_in.direction / r_in.direction.length()
+        unit_direction = unit_vector(r_in.direction)
         cos_theta = min(dot(-unit_direction, rec.normal), 1.0)
         sin_theta = math.sqrt(1.0 - cos_theta * cos_theta)
 
