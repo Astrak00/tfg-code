@@ -2,6 +2,17 @@
 # For lambertian: x y z radius lambertian r g b
 # For metal:      x y z radius metal r g b fuzz
 # For dielectric: x y z radius dielectric index
+c ratio 16 9
+c width 800
+c samplesPerPixel 50
+c maxDepth 50
+c vfov 20
+c lookFrom 13 2 3
+c lookAt 0 0 0
+c vup 0 1 0
+c defocusAngle 0.6
+c focusDist 10
+
 
 0 1 0 1.0 dielectric 1.5
 -4 1 0 1.0 lambertian 0.4 0.2 0.1

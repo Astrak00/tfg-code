@@ -11,8 +11,101 @@ import (
 	"strings"
 )
 
-func createWorldFromFile(filepath string) (HittableList, error) {
+func checkCameraParameters(cam *Camera, line string) {
+	parts := strings.Fields(line)
+	switch parts[1] {
+	case "ratio":
+		firstComponent, err := strconv.ParseFloat(parts[2], 64)
+		secondComponent, err2 := strconv.ParseFloat(parts[3], 64)
+		if err == nil && err2 == nil {
+			cam.AspectRatio = firstComponent / secondComponent
+		} else {
+			fmt.Println("Invalid aspect ratio values.")
+		}
+	case "width":
+		width, err := strconv.Atoi(parts[2])
+		if err == nil {
+			cam.ImageWidth = width
+		} else {
+			fmt.Println("Invalid image width value.")
+		}
+	case "samplesPerPixel":
+		samples, err := strconv.Atoi(parts[2])
+		if err == nil {
+			cam.SamplesPerPixel = samples
+		} else {
+			fmt.Println("Invalid samples per pixel value.")
+		}
+	case "maxDepth":
+		maxDepth, err := strconv.Atoi(parts[2])
+		if err == nil {
+			cam.MaxDepth = maxDepth
+		} else {
+			fmt.Println("Invalid max depth value.")
+		}
+	case "vfov":
+		vfov, err := strconv.ParseFloat(parts[2], 64)
+		if err == nil {
+			cam.Vfov = vfov
+		} else {
+			fmt.Println("Invalid vertical field of view value.")
+		}
+	case "lookFrom":
+		if len(parts) >= 5 {
+			x, err1 := strconv.ParseFloat(parts[2], 64)
+			y, err2 := strconv.ParseFloat(parts[3], 64)
+			z, err3 := strconv.ParseFloat(parts[4], 64)
+			if err1 == nil && err2 == nil && err3 == nil {
+				cam.LookFrom = Point3{[3]float64{x, y, z}}
+			} else {
+				fmt.Println("Invalid lookFrom values.")
+			}
+		}
+	case "lookAt":
+		if len(parts) >= 5 {
+			x, err1 := strconv.ParseFloat(parts[2], 64)
+			y, err2 := strconv.ParseFloat(parts[3], 64)
+			z, err3 := strconv.ParseFloat(parts[4], 64)
+			if err1 == nil && err2 == nil && err3 == nil {
+				cam.LookAt = Point3{[3]float64{x, y, z}}
+			} else {
+				fmt.Println("Invalid lookAt values.")
+			}
+		}
+	case "vup":
+		if len(parts) >= 5 {
+			x, err1 := strconv.ParseFloat(parts[2], 64)
+			y, err2 := strconv.ParseFloat(parts[3], 64)
+			z, err3 := strconv.ParseFloat(parts[4], 64)
+			if err1 == nil && err2 == nil && err3 == nil {
+				cam.Vup = Vec3{[3]float64{x, y, z}}
+			} else {
+				fmt.Println("Invalid vup values.")
+			}
+		}
+	case "defocusAngle":
+		angle, err := strconv.ParseFloat(parts[2], 64)
+		if err == nil {
+			cam.DefocusAngle = angle
+		} else {
+			fmt.Println("Invalid defocus angle value.")
+		}
+	case "focusDist":
+		focusDist, err := strconv.ParseFloat(parts[2], 64)
+		if err == nil {
+			cam.FocusDist = focusDist
+		} else {
+			fmt.Println("Invalid focus distance value.")
+		}
+	default:
+		fmt.Println("Unknown camera parameter:", parts[1])
+	}
+	return
+}
+
+func createWorldFromFile(filepath string) (HittableList, Camera, error) {
 	world := HittableList{}
+	cam := Camera{}
 
 	// Add ground Sphere
 	groundMaterial := &Lambertian{Color{[3]float64{0.5, 0.5, 0.5}}}
@@ -21,7 +114,7 @@ func createWorldFromFile(filepath string) (HittableList, error) {
 	// Open and read the file
 	file, err := os.Open(filepath)
 	if err != nil {
-		return world, err
+		return world, cam, err
 	}
 	defer file.Close()
 
@@ -30,6 +123,12 @@ func createWorldFromFile(filepath string) (HittableList, error) {
 		line := scanner.Text()
 		// Skip empty lines and comments
 		if line == "" || strings.HasPrefix(strings.TrimSpace(line), "#") {
+			continue
+		}
+		// Check for camera parameters
+
+		if strings.HasPrefix(line, "c") {
+			checkCameraParameters(&cam, line)
 			continue
 		}
 
@@ -88,11 +187,11 @@ func createWorldFromFile(filepath string) (HittableList, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return world, err
+		return world, cam, err
 	}
 
 	fmt.Errorf("Loaded world from %s\n", filepath)
-	return world, nil
+	return world, cam, nil
 }
 
 func randomScene() HittableList {
@@ -184,10 +283,11 @@ func main() {
 
 	// Initialize world - either from file or randomly generated
 	var world HittableList
+	var cam Camera
 
 	if _, err := os.Stat(*filepath); err == nil {
 		// File exists, try to read it
-		world, err = createWorldFromFile(*filepath)
+		world, cam, err = createWorldFromFile(*filepath)
 		if err != nil {
 			fmt.Printf("Error reading from %s: %v\n", *filepath, err)
 			fmt.Println("Generating random scene instead.")
@@ -199,20 +299,7 @@ func main() {
 	}
 
 	// Setup and render camera
-	cam := Camera{
-		AspectRatio:     16.0 / 9.0,
-		ImageWidth:      800,
-		SamplesPerPixel: 50,
-		MaxDepth:        50,
-		Vfov:            20,
-
-		LookFrom: Point3{[3]float64{13, 2, 3}},
-		LookAt:   Point3{[3]float64{0, 0, 0}},
-		Vup:      Vec3{[3]float64{0, 1, 0}},
-
-		DefocusAngle: 0.6,
-		FocusDist:    10.0,
-	}
+	fmt.Fprintf(os.Stderr, "Camera parameters: %v\n", cam)
 
 	cam.Render(&world, numThreads)
 }
