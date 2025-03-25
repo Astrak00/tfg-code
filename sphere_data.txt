@@ -13,6 +13,9 @@ c vup 0 1 0
 c defocusAngle 0.6
 c focusDist 10
 
+# Ground 
+0 -1000 0 1000 lambertian 0.5 0.5 0.5
+
 
 0 1 0 1.0 dielectric 1.5
 -4 1 0 1.0 lambertian 0.4 0.2 0.1
