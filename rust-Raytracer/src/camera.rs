@@ -1,3 +1,5 @@
+#![allow(clippy::only_used_in_recursion)]
+
 use std::{
     io::{self, Write},
     sync::{Arc, Mutex},

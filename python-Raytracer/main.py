@@ -89,7 +89,7 @@ def create_world_from_file(filepath):
 
         print(f"Loaded world from {filepath}", file=sys.stderr)
         return world, cam
-    except Exception as e:
+    except (FileNotFoundError, IOError) as e:
         print(f"Error reading from {filepath}: {e}", file=sys.stderr)
         return None, None
 
@@ -145,7 +145,7 @@ def random_scene():
 
     # After creating the random scene, also save it to a file
     try:
-        with open("sphere_data.txt", "w") as file:
+        with open("sphere_data.txt", "w", encoding="utf-8") as file:
             # Small spheres
             for a in range(-11, 11):
                 for b in range(-11, 11):
@@ -186,7 +186,7 @@ def random_scene():
             file.write("0.0 1.0 0.0 1.0 dielectric 1.5\n")
             file.write("-4.0 1.0 0.0 1.0 lambertian 0.4 0.2 0.1\n")
             file.write("4.0 1.0 0.0 1.0 metal 0.7 0.6 0.5 0.0\n")
-    except Exception as e:
+    except (IOError, OSError) as e:
         print(f"Error writing scene to file: {e}", file=sys.stderr)
 
     return world
@@ -203,7 +203,7 @@ def main():
 
     # Default camera setup
     cam = Camera()
-    
+
     cam.aspect_ratio = 16.0 / 9.0
     cam.image_width = 800
     cam.samples_per_pixel = 50  # Less samples for quicker rendering
