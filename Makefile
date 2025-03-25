@@ -59,17 +59,22 @@ rust:
 	tail -n 3 ../results/rust-RayTracer.time > ../results/rust-RayTracer.time.tmp && mv ../results/rust-RayTracer.time.tmp ../results/rust-RayTracer.time && \
 	cd ..
 
+ppm-diff:
+	@mkdir -p helpers/build
+	g++ -std=c++11 -O2 helpers/ppm_diff.cpp -o helpers/build/ppm_diff
+	@echo "PPM difference tool built: helpers/build/ppm_diff"
+	@echo "Usage: helpers/build/ppm_diff <file1.ppm> <file2.ppm>"
+
 all:
 	@echo "Running all implementations..."
-	@echo "Running *C++* implementation..."
-	@$(MAKE) cpp
-	@$(MAKE) cpp-multi
-	@echo "Running *GO* implementation..."
-	@$(MAKE) go
+	@echo "Running multicore implementations..."
 	@$(MAKE) go-multi
-	@echo "Running *Rust* implementation..."
+	@$(MAKE) cpp-multi
 	@$(MAKE) rust
-	@echo "Running *Pypy* implementation..."
+	@echo "Running singlecore implementation..."
+	@$(MAKE) cpp
+	@$(MAKE) go
+	@echo "Running *PyPy* implementation..."
 	@$(MAKE) pypy
 	@$(MAKE) pypy-multi
 	@echo "Running *Python* implementation..."

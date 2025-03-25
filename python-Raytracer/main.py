@@ -1,6 +1,7 @@
 import random
 import math
 import os
+import argparse
 import concurrent.futures
 from vector import Vector
 from ray import Ray
@@ -8,7 +9,7 @@ from hittable import HittableList, Sphere, HitRecord
 from material import Lambertian, Metal, Dielectric
 from camera import Camera
 
-def ray_color(ray, world, depth):
+def ray_color(ray, world, depth) -> Vector:
     hit_record = HitRecord()
     
     # If we've exceeded the ray bounce limit, no more light is gathered
@@ -19,12 +20,12 @@ def ray_color(ray, world, depth):
     if world.hit(ray, 0.001, float('inf'), hit_record):
         scattered = Ray()
         attenuation = Vector()
-        
+
         success, scattered, attenuation = hit_record.material.scatter(ray, hit_record)
         if success:
             return attenuation * ray_color(scattered, world, depth-1)
         return Vector(0, 0, 0)
-    
+
     # Background - a simple gradient
     unit_direction = ray.direction.normalize()
     t = 0.5 * (unit_direction.y + 1.0)
@@ -75,6 +76,58 @@ def random_scene():
     
     return world
 
+
+def create_world_from_file(filepath):
+    world = HittableList()
+
+    # Add ground sphere
+    ground_material = Lambertian(Vector(0.5, 0.5, 0.5))
+    world.add(Sphere(Vector(0, -1000, 0), 1000, ground_material))
+
+    try:
+        with open(filepath, 'r', encoding="utf-8") as file:
+            for line in file:
+                # Skip empty lines and comments
+                if not line.strip() or line.strip().startswith('#'):
+                    continue
+
+                parts = line.strip().split()
+                if len(parts) < 5:  # At minimum we need x, y, z, radius, material_type
+                    continue
+
+                try:
+                    x, y, z = float(parts[0]), float(parts[1]), float(parts[2])
+                    radius = float(parts[3])
+                    material_type = parts[4]
+
+                    if material_type == "lambertian" and len(parts) >= 8:
+                        r, g, b = float(parts[5]), float(parts[6]), float(parts[7])
+                        material = Lambertian(Vector(r, g, b))
+                    elif material_type == "metal" and len(parts) >= 9:
+                        r, g, b = float(parts[5]), float(parts[6]), float(parts[7])
+                        fuzz = float(parts[8])
+                        material = Metal(Vector(r, g, b), fuzz)
+                    elif material_type == "dielectric" and len(parts) >= 6:
+                        index = float(parts[5])
+                        material = Dielectric(index)
+                    else:
+                        # Skip if material parameters are invalid
+                        continue
+
+                    world.add(Sphere(Vector(x, y, z), radius, material))
+                except (ValueError, IndexError):
+                    # Skip lines with invalid values
+                    continue
+
+        # print(f"Loaded world from {filepath}")
+
+    except FileNotFoundError:
+        print(f"Error: File {filepath} not found. Generating random scene instead.", flush=True)
+        return random_scene()
+
+    return world
+
+
 def render_pixel(params):
     i, j, image_width, image_height, samples_per_pixel, max_depth, camera, world = params
     pixel_color = Vector(0, 0, 0)
@@ -95,7 +148,14 @@ def render_pixel(params):
           f"{int(256 * max(0, min(0.999, g)))} "
           f"{int(256 * max(0, min(0.999, b)))}")
 
+
 def main():
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Ray Tracer')
+    parser.add_argument('--path', type=str, default="sphere_data.txt", 
+                        help='Path to the sphere data file (default: sphere_data.txt)')
+    args = parser.parse_args()
+
     # Image
     aspect_ratio = 16.0 / 9.0
     image_width = 800
@@ -103,8 +163,12 @@ def main():
     samples_per_pixel = 50
     max_depth = 50
 
-    # World
-    world = random_scene()
+    # World - either loaded from file or randomly generated
+    if os.path.exists(args.path):
+        world = create_world_from_file(args.path)
+    else:
+        print(f"File {args.path} not found. Generating random scene instead.")
+        world = random_scene()
 
     # Camera
     lookfrom = Vector(13, 2, 3)
@@ -121,7 +185,8 @@ def main():
 
     # Render
     print(f"P3\n{image_width} {image_height}\n255")
-    
+    pixel_string = ""
+
     if num_threads > 1:
         # Multithreaded rendering
         pixels = []
@@ -139,6 +204,7 @@ def main():
         pixels.sort()  # Will sort by j (row) first, then by i (column)
         for _, _, color_str in pixels:
             print(color_str)
+
     else:
         # Single-threaded rendering (original code)
         for j in range(image_height-1, -1, -1):
@@ -161,9 +227,9 @@ def main():
                 b = math.sqrt(scale * b)
                 
                 # Write the translated [0,255] value of each color component
-                print(f"{int(256 * max(0, min(0.999, r)))} "
-                      f"{int(256 * max(0, min(0.999, g)))} "
-                      f"{int(256 * max(0, min(0.999, b)))}")
+                pixel_string += f"{int(256 * max(0, min(0.999, r)))} {int(256 * max(0, min(0.999, g)))} {int(256 * max(0, min(0.999, b)))}"
 
+        print(pixel_string)
 if __name__ == "__main__":
+    # The python version blurs too much.
     main()
