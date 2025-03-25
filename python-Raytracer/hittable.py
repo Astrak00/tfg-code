@@ -1,78 +1,76 @@
 import math
-from vector import Vector
+from vec3 import dot, Point3, Vec3
+from utils import Interval
+
 
 class HitRecord:
     def __init__(self):
-        self.point = Vector()
-        self.normal = Vector()
-        self.material = None
+        self.p = Point3()
+        self.normal = Vec3()
+        self.mat = None
         self.t = 0.0
         self.front_face = False
-    
-    def set_face_normal(self, ray, outward_normal):
-        self.front_face = ray.direction.dot(outward_normal) < 0
+
+    def set_face_normal(self, r, outward_normal):
+        self.front_face = dot(r.direction, outward_normal) < 0
         self.normal = outward_normal if self.front_face else -outward_normal
 
+
 class Hittable:
-    def hit(self, ray, t_min, t_max, hit_record):
+    def hit(self, r, ray_t, rec):
+        """Returns True if hit, updates rec"""
         pass
+
 
 class HittableList(Hittable):
     def __init__(self):
         self.objects = []
-    
+
     def add(self, obj):
         self.objects.append(obj)
-    
-    def clear(self):
-        self.objects.clear()
-    
-    def hit(self, ray, t_min, t_max, hit_record):
-        temp_record = HitRecord()
+
+    def hit(self, r, ray_t, rec):
         hit_anything = False
-        closest_so_far = t_max
-        
+        closest_so_far = ray_t.max
+
         for obj in self.objects:
-            if obj.hit(ray, t_min, closest_so_far, temp_record):
+            temp_interval = Interval(ray_t.min, closest_so_far)
+            if obj.hit(r, temp_interval, rec):
                 hit_anything = True
-                closest_so_far = temp_record.t
-                hit_record.point = temp_record.point
-                hit_record.normal = temp_record.normal
-                hit_record.t = temp_record.t
-                hit_record.front_face = temp_record.front_face
-                hit_record.material = temp_record.material
-        
+                closest_so_far = rec.t
+
         return hit_anything
+
 
 class Sphere(Hittable):
     def __init__(self, center, radius, material):
         self.center = center
         self.radius = radius
         self.material = material
-    
-    def hit(self, ray, t_min, t_max, hit_record):
-        oc = ray.origin - self.center
-        a = ray.direction.dot(ray.direction)
-        half_b = oc.dot(ray.direction)
-        c = oc.dot(oc) - self.radius * self.radius
-        
+
+    def hit(self, r, ray_t, rec):
+        oc = r.origin - self.center
+        a = r.direction.length_squared()
+        half_b = dot(oc, r.direction)
+        c = oc.length_squared() - self.radius * self.radius
+
         discriminant = half_b * half_b - a * c
         if discriminant < 0:
             return False
-        
+
         sqrtd = math.sqrt(discriminant)
-        
-        # Find the nearest root that lies in the acceptable range
+
+        # Find the nearest root in the acceptable range
         root = (-half_b - sqrtd) / a
-        if root < t_min or t_max < root:
+        if not ray_t.contains(root):
             root = (-half_b + sqrtd) / a
-            if root < t_min or t_max < root:
+            if not ray_t.contains(root):
                 return False
-        
-        hit_record.t = root
-        hit_record.point = ray.point_at(hit_record.t)
-        outward_normal = (hit_record.point - self.center) / self.radius
-        hit_record.set_face_normal(ray, outward_normal)
-        hit_record.material = self.material
-        
+
+        rec.t = root
+        rec.p = r.at(rec.t)
+        outward_normal = (rec.p - self.center) / self.radius
+        rec.set_face_normal(r, outward_normal)
+        rec.mat = self.material
+
         return True

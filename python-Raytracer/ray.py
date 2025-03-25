@@ -1,9 +1,9 @@
-from vector import Vector
+
 
 class Ray:
-    def __init__(self, origin=Vector(), direction=Vector()):
+    def __init__(self, origin, direction):
         self.origin = origin
-        self.direction = direction.normalize()
-    
-    def point_at(self, t):
+        self.direction = direction
+
+    def at(self, t):
         return self.origin + self.direction * t

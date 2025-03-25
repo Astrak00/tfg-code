@@ -1,235 +1,221 @@
-import random
-import math
+import sys
 import os
-import argparse
-import concurrent.futures
-from vector import Vector
-from ray import Ray
-from hittable import HittableList, Sphere, HitRecord
+import multiprocessing
+
+from vec3 import Vec3, Point3, Color
+from hittable import HittableList, Sphere
 from material import Lambertian, Metal, Dielectric
 from camera import Camera
-
-def ray_color(ray, world, depth) -> Vector:
-    hit_record = HitRecord()
-    
-    # If we've exceeded the ray bounce limit, no more light is gathered
-    if depth <= 0:
-        return Vector(0, 0, 0)
-    
-    # 0.001 is an epsilon value to avoid shadow acne
-    if world.hit(ray, 0.001, float('inf'), hit_record):
-        scattered = Ray()
-        attenuation = Vector()
-
-        success, scattered, attenuation = hit_record.material.scatter(ray, hit_record)
-        if success:
-            return attenuation * ray_color(scattered, world, depth-1)
-        return Vector(0, 0, 0)
-
-    # Background - a simple gradient
-    unit_direction = ray.direction.normalize()
-    t = 0.5 * (unit_direction.y + 1.0)
-    return Vector(1.0, 1.0, 1.0) * (1.0-t) + Vector(0.5, 0.7, 1.0) * t
-
-def random_scene():
-    with open("random_scene.txt", "w") as f:
-        world = HittableList()
-        
-        ground_material = Lambertian(Vector(0.5, 0.5, 0.5))
-        world.add(Sphere(Vector(0, -1000, 0), 1000, ground_material))
-        
-        for a in range(-11, 11):
-            for b in range(-11, 11):
-                choose_mat = random.random()
-                center = Vector(a + 0.9 * random.random(), 0.2, b + 0.9 * random.random())
-                
-                if (center - Vector(4, 0.2, 0)).length() > 0.9:
-                    if choose_mat < 0.8:
-                        # Diffuse
-                        albedo = Vector(random.random(), random.random(), random.random()) * \
-                                Vector(random.random(), random.random(), random.random())
-                        sphere_material = Lambertian(albedo)
-                        world.add(Sphere(center, 0.2, sphere_material))
-                        # Write sphere info to file
-                        f.write(f"{center.x} {center.y} {center.z} 0.2 lambertian {albedo.x} {albedo.y} {albedo.z}\n")
-                    elif choose_mat < 0.95:
-                        # Metal
-                        albedo = Vector(random.uniform(0.5, 1), random.uniform(0.5, 1), random.uniform(0.5, 1))
-                        fuzz = random.uniform(0, 0.5)
-                        sphere_material = Metal(albedo, fuzz)
-                        world.add(Sphere(center, 0.2, sphere_material))
-                        f.write(f"{center.x} {center.y} {center.z} 0.2 metal {albedo.x} {albedo.y} {albedo.z} {fuzz}\n")
-                    else:
-                        # Glass
-                        sphere_material = Dielectric(1.5)
-                        world.add(Sphere(center, 0.2, sphere_material))
-                        f.write(f"{center.x} {center.y} {center.z} 0.2 dielectric 1.5\n")
-    
-    material1 = Dielectric(1.5)
-    world.add(Sphere(Vector(0, 1, 0), 1.0, material1))
-    
-    material2 = Lambertian(Vector(0.4, 0.2, 0.1))
-    world.add(Sphere(Vector(-4, 1, 0), 1.0, material2))
-    
-    material3 = Metal(Vector(0.7, 0.6, 0.5), 0.0)
-    world.add(Sphere(Vector(4, 1, 0), 1.0, material3))
-    
-    return world
+from utils import random_double
 
 
 def create_world_from_file(filepath):
+    """Create world from a scene description file"""
     world = HittableList()
 
     # Add ground sphere
-    ground_material = Lambertian(Vector(0.5, 0.5, 0.5))
-    world.add(Sphere(Vector(0, -1000, 0), 1000, ground_material))
+    ground_material = Lambertian(Color(0.5, 0.5, 0.5))
+    world.add(Sphere(Point3(0.0, -1000.0, 0.0), 1000.0, ground_material))
 
+    # Read spheres from file
     try:
-        with open(filepath, 'r', encoding="utf-8") as file:
+        with open(filepath, "r", encoding="utf-8") as file:
             for line in file:
+                line = line.strip()
                 # Skip empty lines and comments
-                if not line.strip() or line.strip().startswith('#'):
+                if not line or line.startswith("#"):
                     continue
 
-                parts = line.strip().split()
-                if len(parts) < 5:  # At minimum we need x, y, z, radius, material_type
-                    continue
+                parts = line.split()
+                if len(parts) < 5:
+                    continue  # Need at least x, y, z, radius, material_type
 
-                try:
-                    x, y, z = float(parts[0]), float(parts[1]), float(parts[2])
-                    radius = float(parts[3])
-                    material_type = parts[4]
+                # Parse coordinates and radius
+                x = float(parts[0]) if parts[0] else 0.0
+                y = float(parts[1]) if parts[1] else 0.0
+                z = float(parts[2]) if parts[2] else 0.0
+                radius = float(parts[3]) if parts[3] else 0.2
+                material_type = parts[4]
 
-                    if material_type == "lambertian" and len(parts) >= 8:
-                        r, g, b = float(parts[5]), float(parts[6]), float(parts[7])
-                        material = Lambertian(Vector(r, g, b))
-                    elif material_type == "metal" and len(parts) >= 9:
-                        r, g, b = float(parts[5]), float(parts[6]), float(parts[7])
-                        fuzz = float(parts[8])
-                        material = Metal(Vector(r, g, b), fuzz)
-                    elif material_type == "dielectric" and len(parts) >= 6:
-                        index = float(parts[5])
-                        material = Dielectric(index)
-                    else:
-                        # Skip if material parameters are invalid
-                        continue
+                center = Point3(x, y, z)
 
-                    world.add(Sphere(Vector(x, y, z), radius, material))
-                except (ValueError, IndexError):
-                    # Skip lines with invalid values
-                    continue
+                # Parse material based on type
+                if material_type == "lambertian" and len(parts) >= 8:
+                    r = float(parts[5]) if parts[5] else 0.5
+                    g = float(parts[6]) if parts[6] else 0.5
+                    b = float(parts[7]) if parts[7] else 0.5
+                    material = Lambertian(Color(r, g, b))
+                    world.add(Sphere(center, radius, material))
+                elif material_type == "metal" and len(parts) >= 9:
+                    r = float(parts[5]) if parts[5] else 0.5
+                    g = float(parts[6]) if parts[6] else 0.5
+                    b = float(parts[7]) if parts[7] else 0.5
+                    fuzz = float(parts[8]) if parts[8] else 0.0
+                    material = Metal(Color(r, g, b), fuzz)
+                    world.add(Sphere(center, radius, material))
+                elif material_type == "dielectric" and len(parts) >= 6:
+                    index = float(parts[5]) if parts[5] else 1.5
+                    material = Dielectric(index)
+                    world.add(Sphere(center, radius, material))
+                else:
+                    continue  # Skip invalid material types or insufficient parameters
 
-        # print(f"Loaded world from {filepath}")
+        print(f"Loaded world from {filepath}", file=sys.stderr)
+        return world
+    except Exception as e:
+        print(f"Error reading from {filepath}: {e}", file=sys.stderr)
+        return None
 
-    except FileNotFoundError:
-        print(f"Error: File {filepath} not found. Generating random scene instead.", flush=True)
-        return random_scene()
+
+def random_scene():
+    """Generate a random scene with many spheres"""
+    world = HittableList()
+
+    # Ground
+    ground_material = Lambertian(Color(0.5, 0.5, 0.5))
+    world.add(Sphere(Point3(0.0, -1000.0, 0.0), 1000.0, ground_material))
+
+    # Small random spheres
+    for a in range(-11, 11):
+        for b in range(-11, 11):
+            choose_mat = random_double()
+            center = Point3(a + 0.9 * random_double(), 0.2, b + 0.9 * random_double())
+
+            if (center - Point3(4.0, 0.2, 0.0)).length() > 0.9:
+                if choose_mat < 0.8:
+                    # Diffuse
+                    albedo = Color(
+                        random_double() * random_double(),
+                        random_double() * random_double(),
+                        random_double() * random_double(),
+                    )
+                    sphere_material = Lambertian(albedo)
+                    world.add(Sphere(center, 0.2, sphere_material))
+                elif choose_mat < 0.95:
+                    # Metal
+                    albedo = Color(
+                        0.5 * (1.0 + random_double()),
+                        0.5 * (1.0 + random_double()),
+                        0.5 * (1.0 + random_double()),
+                    )
+                    fuzz = 0.5 * random_double()
+                    sphere_material = Metal(albedo, fuzz)
+                    world.add(Sphere(center, 0.2, sphere_material))
+                else:
+                    # Glass
+                    sphere_material = Dielectric(1.5)
+                    world.add(Sphere(center, 0.2, sphere_material))
+
+    # Three larger spheres
+    material1 = Dielectric(1.5)
+    world.add(Sphere(Point3(0.0, 1.0, 0.0), 1.0, material1))
+
+    material2 = Lambertian(Color(0.4, 0.2, 0.1))
+    world.add(Sphere(Point3(-4.0, 1.0, 0.0), 1.0, material2))
+
+    material3 = Metal(Color(0.7, 0.6, 0.5), 0.0)
+    world.add(Sphere(Point3(4.0, 1.0, 0.0), 1.0, material3))
+
+    # After creating the random scene, also save it to a file
+    try:
+        with open("sphere_data.txt", "w") as file:
+            # Small spheres
+            for a in range(-11, 11):
+                for b in range(-11, 11):
+                    choose_mat = random_double()
+                    center = Point3(
+                        a + 0.9 * random_double(), 0.2, b + 0.9 * random_double()
+                    )
+
+                    if (center - Point3(4.0, 0.2, 0.0)).length() > 0.9:
+                        if choose_mat < 0.8:
+                            # Diffuse
+                            albedo = Color(
+                                random_double() * random_double(),
+                                random_double() * random_double(),
+                                random_double() * random_double(),
+                            )
+                            file.write(
+                                f"{center.x()} {center.y()} {center.z()} 0.2 lambertian {albedo.x()} {albedo.y()} {albedo.z()}\n"
+                            )
+                        elif choose_mat < 0.95:
+                            # Metal
+                            albedo = Color(
+                                0.5 * (1.0 + random_double()),
+                                0.5 * (1.0 + random_double()),
+                                0.5 * (1.0 + random_double()),
+                            )
+                            fuzz = 0.5 * random_double()
+                            file.write(
+                                f"{center.x()} {center.y()} {center.z()} 0.2 metal {albedo.x()} {albedo.y()} {albedo.z()} {fuzz}\n"
+                            )
+                        else:
+                            # Glass
+                            file.write(
+                                f"{center.x()} {center.y()} {center.z()} 0.2 dielectric 1.5\n"
+                            )
+
+            # Large spheres
+            file.write("0.0 1.0 0.0 1.0 dielectric 1.5\n")
+            file.write("-4.0 1.0 0.0 1.0 lambertian 0.4 0.2 0.1\n")
+            file.write("4.0 1.0 0.0 1.0 metal 0.7 0.6 0.5 0.0\n")
+    except Exception as e:
+        print(f"Error writing scene to file: {e}", file=sys.stderr)
 
     return world
 
 
-def render_pixel(params):
-    i, j, image_width, image_height, samples_per_pixel, max_depth, camera, world = params
-    pixel_color = Vector(0, 0, 0)
-    for _ in range(samples_per_pixel):
-        u = (i + random.random()) / (image_width - 1)
-        v = (j + random.random()) / (image_height - 1)
-        ray = camera.get_ray(u, v)
-        pixel_color += ray_color(ray, world, max_depth)
-    
-    # Divide the color by the number of samples and gamma-correct for gamma=2.0
-    scale = 1.0 / samples_per_pixel
-    r = math.sqrt(scale * pixel_color.x)
-    g = math.sqrt(scale * pixel_color.y)
-    b = math.sqrt(scale * pixel_color.z)
-    
-    # Return the color as a string
-    return (j, i, f"{int(256 * max(0, min(0.999, r)))} "
-          f"{int(256 * max(0, min(0.999, g)))} "
-          f"{int(256 * max(0, min(0.999, b)))}")
-
-
 def main():
+    """Main entry point for the ray tracer"""
     # Parse command line arguments
-    parser = argparse.ArgumentParser(description='Ray Tracer')
-    parser.add_argument('--path', type=str, default="sphere_data.txt", 
-                        help='Path to the sphere data file (default: sphere_data.txt)')
-    args = parser.parse_args()
+    filepath = "sphere_data.txt"
 
-    # Image
-    aspect_ratio = 16.0 / 9.0
-    image_width = 800
-    image_height = int(image_width / aspect_ratio)
-    samples_per_pixel = 50
-    max_depth = 50
+    for i in range(1, len(sys.argv)):
+        if sys.argv[i] == "--path" and i + 1 < len(sys.argv):
+            filepath = sys.argv[i + 1]
 
-    # World - either loaded from file or randomly generated
-    if os.path.exists(args.path):
-        world = create_world_from_file(args.path)
-    else:
-        print(f"File {args.path} not found. Generating random scene instead.")
+    # Setup world - either from file or randomly generated
+    world = None
+    if os.path.exists(filepath):
+        world = create_world_from_file(filepath)
+
+    if world is None:
+        print(
+            f"File {filepath} not found or error loading. Generating random scene instead.",
+            file=sys.stderr,
+        )
         world = random_scene()
 
-    # Camera
-    lookfrom = Vector(13, 2, 3)
-    lookat = Vector(0, 0, 0)
-    vup = Vector(0, 1, 0)
-    dist_to_focus = 10.0
-    aperture = 0.6
+    # Camera setup
+    cam = Camera()
+    cam.aspect_ratio = 16.0 / 9.0
+    cam.image_width = 800
+    cam.samples_per_pixel = 50  # Less samples for quicker rendering
+    cam.max_depth = 50
+    cam.vfov = 20.0
 
-    camera = Camera(lookfrom, lookat, vup, 20, aspect_ratio, aperture, dist_to_focus)
+    # Camera position and orientation
+    cam.look_from = Point3(13.0, 2.0, 3.0)
+    cam.look_at = Point3(0.0, 0.0, 0.0)
+    cam.vup = Vec3(0.0, 1.0, 0.0)
 
-    # Determine whether to use multithreading
-    multithreading = os.environ.get('MULTITHREADING', '') != ''
-    num_threads = os.cpu_count() if multithreading else 1
+    # Defocus blur
+    cam.defocus_angle = 0.6
+    cam.focus_dist = 10.0
 
-    # Render
-    print(f"P3\n{image_width} {image_height}\n255")
-    pixel_string = ""
-
-    if num_threads > 1:
-        # Multithreaded rendering
-        pixels = []
-        with concurrent.futures.ProcessPoolExecutor(max_workers=num_threads) as executor:
-            # Prepare parameters for all pixels
-            pixel_params = []
-            for j in range(image_height-1, -1, -1):
-                for i in range(image_width):
-                    pixel_params.append((i, j, image_width, image_height, samples_per_pixel, max_depth, camera, world))
-            
-            # Process pixels in parallel and collect results
-            pixels = list(executor.map(render_pixel, pixel_params))
-        
-        # Sort the pixels by their position (j, i) and print them in order
-        pixels.sort()  # Will sort by j (row) first, then by i (column)
-        for _, _, color_str in pixels:
-            print(color_str)
-
+    # Determine the number of threads to use
+    num_threads = os.environ.get("OMP_NUM_THREADS")
+    if num_threads:
+        try:
+            num_threads = int(num_threads)
+        except ValueError:
+            num_threads = multiprocessing.cpu_count()
     else:
-        # Single-threaded rendering (original code)
-        for j in range(image_height-1, -1, -1):
-            for i in range(image_width):
-                pixel_color = Vector(0, 0, 0)
-                for _ in range(samples_per_pixel):
-                    u = (i + random.random()) / (image_width - 1)
-                    v = (j + random.random()) / (image_height - 1)
-                    ray = camera.get_ray(u, v)
-                    pixel_color += ray_color(ray, world, max_depth)
-                
-                # Divide the color by the number of samples and gamma-correct for gamma=2.0
-                r = pixel_color.x
-                g = pixel_color.y
-                b = pixel_color.z
-                
-                scale = 1.0 / samples_per_pixel
-                r = math.sqrt(scale * r)
-                g = math.sqrt(scale * g)
-                b = math.sqrt(scale * b)
-                
-                # Write the translated [0,255] value of each color component
-                pixel_string += f"{int(256 * max(0, min(0.999, r)))} {int(256 * max(0, min(0.999, g)))} {int(256 * max(0, min(0.999, b)))}"
+        num_threads = multiprocessing.cpu_count()
 
-        print(pixel_string)
+    # Render the scene
+    cam.render(world, sys.stdout, num_threads)
+
+
 if __name__ == "__main__":
-    # The python version blurs too much.
     main()
