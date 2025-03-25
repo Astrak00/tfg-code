@@ -49,10 +49,10 @@ fn create_world_from_file(filepath: &str) -> io::Result<HittableList> {
         }
 
         // Parse coordinates and radius
-        let x = parts[0].parse::<f64>().unwrap_or_else(|_| 0.0);
-        let y = parts[1].parse::<f64>().unwrap_or_else(|_| 0.0);
-        let z = parts[2].parse::<f64>().unwrap_or_else(|_| 0.0);
-        let radius = parts[3].parse::<f64>().unwrap_or_else(|_| 0.2);
+        let x = parts[0].parse::<f64>().unwrap_or(0.0);
+        let y = parts[1].parse::<f64>().unwrap_or(0.0);
+        let z = parts[2].parse::<f64>().unwrap_or(0.0);
+        let radius = parts[3].parse::<f64>().unwrap_or(0.2);
         let material_type = parts[4];
 
         let center = Point3::new(x, y, z);

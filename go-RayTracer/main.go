@@ -178,7 +178,7 @@ func main() {
 	numThreads := 1
 
 	numThreadsEnv := os.Getenv("MULTITHREADING")
-	if numThreadsEnv != "" {
+	if numThreadsEnv == "" {
 		numThreads = runtime.NumCPU()
 	}
 

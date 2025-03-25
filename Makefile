@@ -1,70 +1,73 @@
+# Directories
+RESULTS_DIR=$(CURDIR)/results
+
+# Helper function to run a ray tracer
+define run_trace
+	@bash -c '\
+		mkdir -p $(RESULTS_DIR); \
+		cd $(1) > /dev/null; \
+		echo "Running $(2) with command $(3)..." && \
+		{ time $(3) --path ../sphere_data.txt > $(RESULTS_DIR)/$(4).ppm; } 2> $(RESULTS_DIR)/$(4).time; \
+		echo "Running $(2) with command $(3) completed." && \
+		tail -n 3 $(RESULTS_DIR)/$(4).time > $(RESULTS_DIR)/$(4).time.tmp && mv $(RESULTS_DIR)/$(4).time.tmp $(RESULTS_DIR)/$(4).time; \
+		cd - > /dev/null \
+	'
+endef
+
+# Python implementations
 python:
-	cd python-RayTracer && \
-	{ time python3 main.py > ../results/py-RayTracer.ppm; } 2> ../results/py-RayTracer.time && \
-	tail -n 3 ../results/py-RayTracer.time > ../results/py-RayTracer.time.tmp && mv ../results/py-RayTracer.time.tmp ../results/py-RayTracer.time && \
-	cd ..
+	$(call run_trace,python-RayTracer,Python,MULTITHREADING=1 python3 main.py,py-RayTracer)
 
 python-multi:
-	cd python-RayTracer && \
-	{ time MULTITHREADING=1 python3 main.py > ../results/py-multi-RayTracer.ppm; } 2> ../results/py-multi-RayTracer.time && \
-	tail -n 3 ../results/py-multi-RayTracer.time > ../results/py-multi-RayTracer.time.tmp && mv ../results/py-multi-RayTracer.time.tmp ../results/py-multi-RayTracer.time && \
-	cd ..
+	$(call run_trace,python-RayTracer,Python Multi,python3 main.py,py-multi-RayTracer)
 
 pypy:
-	cd python-RayTracer && \
-	{ time pypy main.py > ../results/pypy-RayTracer.ppm; } 2> ../results/pypy-RayTracer.time && \
-	tail -n 3 ../results/pypy-RayTracer.time > ../results/pypy-RayTracer.time.tmp && mv ../results/pypy-RayTracer.time.tmp ../results/pypy-RayTracer.time && \
-	cd ..
+	@which pypy > /dev/null 2>&1 || (echo "Error: PyPy not found. Please install PyPy or make sure it's in your PATH." && exit 1)
+	$(call run_trace,python-RayTracer,PyPy,MULTITHREADING=1 pypy main.py,pypy-RayTracer)
 
 pypy-multi:
-	cd python-RayTracer && \
-	{ time MULTITHREADING=1 pypy main.py > ../results/pypy-multi-RayTracer.ppm; } 2> ../results/pypy-multi-RayTracer.time && \
-	tail -n 3 ../results/pypy-multi-RayTracer.time > ../results/pypy-multi-RayTracer.time.tmp && mv ../results/pypy-multi-RayTracer.time.tmp ../results/pypy-multi-RayTracer.time && \
-	cd ..
+	@which pypy > /dev/null 2>&1 || (echo "Error: PyPy not found. Please install PyPy or make sure it's in your PATH." && exit 1)
+	$(call run_trace,python-RayTracer,PyPy Multi,pypy main.py,pypy-multi-RayTracer)
 
+# C++ implementations
 cpp:
-	cd cpp-RayTracer && \
-	cmake -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_OPENMP=OFF && cmake --build build -j && \
-	echo "Running C++ Ray Tracer..." && \
-	{ time ./build/inOneWeekend > ../results/cpp-RayTracer.ppm; } 2> ../results/cpp-RayTracer.time && \
-	tail -n 3 ../results/cpp-RayTracer.time > ../results/cpp-RayTracer.time.tmp && mv ../results/cpp-RayTracer.time.tmp ../results/cpp-RayTracer.time && \
-	cd ..
+	@( \
+		pushd cpp-RayTracer > /dev/null; \
+		cmake -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_OPENMP=OFF && cmake --build build -j; \
+		popd > /dev/null \
+	)
+	$(call run_trace,cpp-RayTracer,C++,./build/inOneWeekend,cpp-RayTracer)
 
 cpp-multi:
-	cd cpp-RayTracer && \
-	cmake -B build-multi -DCMAKE_BUILD_TYPE=Release -DENABLE_OPENMP=ON && cmake --build build-multi -j && \
-	echo "Running C++ Ray Tracer..." && \
-	{ time ./build-multi/inOneWeekend > ../results/cpp-multi-RayTracer.ppm; } 2> ../results/cpp-multi-RayTracer.time && \
-	tail -n 3 ../results/cpp-multi-RayTracer.time > ../results/cpp-multi-RayTracer.time.tmp && mv ../results/cpp-multi-RayTracer.time.tmp ../results/cpp-multi-RayTracer.time && \
-	cd ..
+	@( \
+		pushd cpp-RayTracer > /dev/null; \
+		cmake -B build-multi -DCMAKE_BUILD_TYPE=Release -DENABLE_OPENMP=ON && cmake --build build-multi -j; \
+		popd > /dev/null \
+	)
+	$(call run_trace,cpp-RayTracer,C++ Multi,./build-multi/inOneWeekend,cpp-multi-RayTracer)
 
+# Go implementations
 go:
-	cd go-RayTracer && \
-	go build && \
-	{ time ./ray-tracer > ../results/go-RayTracer.ppm; } 2> ../results/go-RayTracer.time && \
-	tail -n 3 ../results/go-RayTracer.time > ../results/go-RayTracer.time.tmp && mv ../results/go-RayTracer.time.tmp ../results/go-RayTracer.time && \
-	cd ..
+	@(pushd go-RayTracer > /dev/null && go build -o ray-tracer && popd > /dev/null)
+	$(call run_trace,go-RayTracer,Go,MULTITHREADING=1 ./ray-tracer,go-RayTracer)
 
 go-multi:
-	cd go-RayTracer && \
-	go build -o ray-tracer-multi -tags openmp && \
-	{ time MULTITHREADING=1 ./ray-tracer-multi > ../results/go-multi-RayTracer.ppm; } 2> ../results/go-multi-RayTracer.time && \
-	tail -n 3 ../results/go-multi-RayTracer.time > ../results/go-multi-RayTracer.time.tmp && mv ../results/go-multi-RayTracer.time.tmp ../results/go-multi-RayTracer.time && \
-	cd ..
+	@(pushd go-RayTracer > /dev/null && go build -o ray-tracer && popd > /dev/null)
+	$(call run_trace,go-RayTracer,Go Multi,"./ray-tracer",go-multi-RayTracer)
 
+# Rust implementation
 rust:
-	cd rust-RayTracer && \
-	cargo build --release && \
-	{ time ./target/release/ray-tracer > ../results/rust-RayTracer.ppm; } 2> ../results/rust-RayTracer.time && \
-	tail -n 3 ../results/rust-RayTracer.time > ../results/rust-RayTracer.time.tmp && mv ../results/rust-RayTracer.time.tmp ../results/rust-RayTracer.time && \
-	cd ..
+	@(pushd rust-RayTracer > /dev/null && cargo build --release && popd > /dev/null)
+	$(call run_trace,rust-RayTracer,Rust,./target/release/ray-tracer,rust-RayTracer)
 
+# PPM difference tool
 ppm-diff:
 	@mkdir -p helpers/build
-	g++ -std=c++11 -O2 helpers/ppm_diff.cpp -o helpers/build/ppm_diff
+	@clang++ -std=c++11 -O2 helpers/ppm_diff.cpp -o helpers/build/ppm_diff
 	@echo "PPM difference tool built: helpers/build/ppm_diff"
 	@echo "Usage: helpers/build/ppm_diff <file1.ppm> <file2.ppm>"
 
+# Run all implementations
 all:
 	@echo "Running all implementations..."
 	@echo "Running multicore implementations..."
@@ -83,11 +86,12 @@ all:
 
 	@echo "All implementations completed."
 	@echo "Generated images:"
-	@ls -lh *.ppm
+	@ls -lh $(RESULTS_DIR)/*.ppm
 	@echo "You can view the images using an image viewer."
 
+# Clean results
 clean:
 	@echo "Cleaning up..."
-	@rm -f results/*.ppm 
-	@rm -f results/*.time
+	@rm -f $(RESULTS_DIR)/*.ppm
+	@rm -f $(RESULTS_DIR)/*.time
 	@echo "Cleaned up."
