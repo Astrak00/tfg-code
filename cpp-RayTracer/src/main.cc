@@ -16,6 +16,9 @@
 #include "hittable_list.h"
 #include "material.h"
 #include "sphere.h"
+#include <fstream>
+#include <sstream>
+
 
 
 int main() {
@@ -24,42 +27,47 @@ int main() {
     auto ground_material = make_shared<lambertian>(color(0.5, 0.5, 0.5));
     world.add(make_shared<sphere>(point3(0,-1000,0), 1000, ground_material));
 
-    for (int a = -11; a < 11; a++) {
-        for (int b = -11; b < 11; b++) {
-            auto choose_mat = random_double();
-            point3 center(a + 0.9*random_double(), 0.2, b + 0.9*random_double());
-
-            if ((center - point3(4, 0.2, 0)).length() > 0.9) {
-                shared_ptr<material> sphere_material;
-
-                if (choose_mat < 0.8) {
-                    // diffuse
-                    auto albedo = color::random() * color::random();
-                    sphere_material = make_shared<lambertian>(albedo);
-                    world.add(make_shared<sphere>(center, 0.2, sphere_material));
-                } else if (choose_mat < 0.95) {
-                    // metal
-                    auto albedo = color::random(0.5, 1);
-                    auto fuzz = random_double(0, 0.5);
-                    sphere_material = make_shared<metal>(albedo, fuzz);
-                    world.add(make_shared<sphere>(center, 0.2, sphere_material));
-                } else {
-                    // glass
-                    sphere_material = make_shared<dielectric>(1.5);
-                    world.add(make_shared<sphere>(center, 0.2, sphere_material));
-                }
+    {
+        std::ifstream infile("sphere_data.txt");
+        std::string line;
+        while (std::getline(infile, line)) {
+            if(line.empty() || line[0]=='#')
+                continue;
+            std::istringstream iss(line);
+            double x, y, z, radius;
+            std::string material_type;
+            if (!(iss >> x >> y >> z >> radius >> material_type))
+                continue; // Skip if line is malformed
+            shared_ptr<material> sphere_material;
+            if (material_type == "lambertian") {
+                double r, g, b;
+                if (!(iss >> r >> g >> b))
+                    continue;
+                sphere_material = make_shared<lambertian>(color(r, g, b));
+            } else if (material_type == "metal") {
+                double r, g, b, fuzz;
+                if (!(iss >> r >> g >> b >> fuzz))
+                    continue;
+                sphere_material = make_shared<metal>(color(r, g, b), fuzz);
+            } else if (material_type == "dielectric") {
+                double index;
+                if (!(iss >> index))
+                    continue;
+                sphere_material = make_shared<dielectric>(index);
             }
+            point3 center(x,y,z);
+            world.add(make_shared<sphere>(center, radius, sphere_material));
         }
     }
 
-    auto material1 = make_shared<dielectric>(1.5);
-    world.add(make_shared<sphere>(point3(0, 1, 0), 1.0, material1));
+    // auto material1 = make_shared<dielectric>(1.5);
+    // world.add(make_shared<sphere>(point3(0, 1, 0), 1.0, material1));
 
-    auto material2 = make_shared<lambertian>(color(0.4, 0.2, 0.1));
-    world.add(make_shared<sphere>(point3(-4, 1, 0), 1.0, material2));
+    // auto material2 = make_shared<lambertian>(color(0.4, 0.2, 0.1));
+    // world.add(make_shared<sphere>(point3(-4, 1, 0), 1.0, material2));
 
-    auto material3 = make_shared<metal>(color(0.7, 0.6, 0.5), 0.0);
-    world.add(make_shared<sphere>(point3(4, 1, 0), 1.0, material3));
+    // auto material3 = make_shared<metal>(color(0.7, 0.6, 0.5), 0.0);
+    // world.add(make_shared<sphere>(point3(4, 1, 0), 1.0, material3));
 
     camera cam;
 
