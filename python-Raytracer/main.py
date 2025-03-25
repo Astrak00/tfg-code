@@ -31,33 +31,38 @@ def ray_color(ray, world, depth):
     return Vector(1.0, 1.0, 1.0) * (1.0-t) + Vector(0.5, 0.7, 1.0) * t
 
 def random_scene():
-    world = HittableList()
-    
-    ground_material = Lambertian(Vector(0.5, 0.5, 0.5))
-    world.add(Sphere(Vector(0, -1000, 0), 1000, ground_material))
-    
-    for a in range(-11, 11):
-        for b in range(-11, 11):
-            choose_mat = random.random()
-            center = Vector(a + 0.9 * random.random(), 0.2, b + 0.9 * random.random())
-            
-            if (center - Vector(4, 0.2, 0)).length() > 0.9:
-                if choose_mat < 0.8:
-                    # Diffuse
-                    albedo = Vector(random.random(), random.random(), random.random()) * \
-                            Vector(random.random(), random.random(), random.random())
-                    sphere_material = Lambertian(albedo)
-                    world.add(Sphere(center, 0.2, sphere_material))
-                elif choose_mat < 0.95:
-                    # Metal
-                    albedo = Vector(random.uniform(0.5, 1), random.uniform(0.5, 1), random.uniform(0.5, 1))
-                    fuzz = random.uniform(0, 0.5)
-                    sphere_material = Metal(albedo, fuzz)
-                    world.add(Sphere(center, 0.2, sphere_material))
-                else:
-                    # Glass
-                    sphere_material = Dielectric(1.5)
-                    world.add(Sphere(center, 0.2, sphere_material))
+    with open("random_scene.txt", "w") as f:
+        world = HittableList()
+        
+        ground_material = Lambertian(Vector(0.5, 0.5, 0.5))
+        world.add(Sphere(Vector(0, -1000, 0), 1000, ground_material))
+        
+        for a in range(-11, 11):
+            for b in range(-11, 11):
+                choose_mat = random.random()
+                center = Vector(a + 0.9 * random.random(), 0.2, b + 0.9 * random.random())
+                
+                if (center - Vector(4, 0.2, 0)).length() > 0.9:
+                    if choose_mat < 0.8:
+                        # Diffuse
+                        albedo = Vector(random.random(), random.random(), random.random()) * \
+                                Vector(random.random(), random.random(), random.random())
+                        sphere_material = Lambertian(albedo)
+                        world.add(Sphere(center, 0.2, sphere_material))
+                        # Write sphere info to file
+                        f.write(f"{center.x} {center.y} {center.z} 0.2 lambertian {albedo.x} {albedo.y} {albedo.z}\n")
+                    elif choose_mat < 0.95:
+                        # Metal
+                        albedo = Vector(random.uniform(0.5, 1), random.uniform(0.5, 1), random.uniform(0.5, 1))
+                        fuzz = random.uniform(0, 0.5)
+                        sphere_material = Metal(albedo, fuzz)
+                        world.add(Sphere(center, 0.2, sphere_material))
+                        f.write(f"{center.x} {center.y} {center.z} 0.2 metal {albedo.x} {albedo.y} {albedo.z} {fuzz}\n")
+                    else:
+                        # Glass
+                        sphere_material = Dielectric(1.5)
+                        world.add(Sphere(center, 0.2, sphere_material))
+                        f.write(f"{center.x} {center.y} {center.z} 0.2 dielectric 1.5\n")
     
     material1 = Dielectric(1.5)
     world.add(Sphere(Vector(0, 1, 0), 1.0, material1))
