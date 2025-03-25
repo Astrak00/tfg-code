@@ -8,10 +8,12 @@ __pycache__
 
 # Go
 ray-tracer
+ray-tracer-multi
 
 # C++
 *.o
 build
+build-multi
 
 # Rust
 target/
@@ -21,6 +23,7 @@ Cargo.lock
 *.ppm
 *.time
 CMakeFiles/
+results/
 
 
 # Report
