@@ -36,6 +36,20 @@ class Camera:
         self.defocus_disk_u = Vec3(0.0, 0.0, 0.0)
         self.defocus_disk_v = Vec3(0.0, 0.0, 0.0)
 
+    def __str__(self):
+        return (
+            f"Camera(aspect_ratio={self.aspect_ratio}\n "
+            f"width={self.image_width}\n "
+            f"samples_per_pixel={self.samples_per_pixel}\n "
+            f"max_depth={self.max_depth}\n "
+            f"vfov={self.vfov}\n "
+            f"look_from={self.look_from}\n "
+            f"look_at={self.look_at}\n "
+            f"vup={self.vup}\n "
+            f"defocus_angle={self.defocus_angle}\n "
+            f"focus_dist={self.focus_dist}\n "
+        )
+
     def initialize(self):
         # Calculate image height
         self.image_height = max(1, int(self.image_width / self.aspect_ratio))

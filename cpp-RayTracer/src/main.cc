@@ -15,7 +15,6 @@
 #include "material.h"
 #include "sphere.h"
 
-#include <cstring>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -35,6 +34,19 @@ int main(int argc, char * argv[]) {
   }
 
   hittable_list world;
+  camera cam;
+
+  // Default camera settings
+  cam.aspect_ratio      = 16.0 / 9.0;
+  cam.image_width       = 800;
+  cam.samples_per_pixel = 50;
+  cam.max_depth         = 50;
+  cam.vfov              = 20;
+  cam.lookfrom          = point3(13, 2, 3);
+  cam.lookat            = point3(0, 0, 0);
+  cam.vup               = vec3(0, 1, 0);
+  cam.defocus_angle     = 0.6;
+  cam.focus_dist        = 10.0;
 
   auto ground_material = make_shared<lambertian>(color(0.5, 0.5, 0.5));
   world.add(make_shared<sphere>(point3(0, -1000, 0), 1000, ground_material));
@@ -49,6 +61,53 @@ int main(int argc, char * argv[]) {
     while (std::getline(infile, line)) {
       if (line.empty() || line[0] == '#') { continue; }
       std::istringstream iss(line);
+
+      // Check if this is a camera parameter line (starts with 'c')
+      std::string first_token;
+      iss >> first_token;
+
+      if (first_token == "c") {
+        std::string param_name;
+        iss >> param_name;
+
+        if (param_name == "ratio") {
+          double width, height;
+          if (iss >> width >> height) { cam.aspect_ratio = width / height; }
+        } else if (param_name == "width") {
+          int width;
+          if (iss >> width) { cam.image_width = width; }
+        } else if (param_name == "samplesPerPixel") {
+          int samples;
+          if (iss >> samples) { cam.samples_per_pixel = samples; }
+        } else if (param_name == "maxDepth") {
+          int depth;
+          if (iss >> depth) { cam.max_depth = depth; }
+        } else if (param_name == "vfov") {
+          double vfov;
+          if (iss >> vfov) { cam.vfov = vfov; }
+        } else if (param_name == "lookFrom") {
+          double x, y, z;
+          if (iss >> x >> y >> z) { cam.lookfrom = point3(x, y, z); }
+        } else if (param_name == "lookAt") {
+          double x, y, z;
+          if (iss >> x >> y >> z) { cam.lookat = point3(x, y, z); }
+        } else if (param_name == "vup") {
+          double x, y, z;
+          if (iss >> x >> y >> z) { cam.vup = vec3(x, y, z); }
+        } else if (param_name == "defocusAngle") {
+          double angle;
+          if (iss >> angle) { cam.defocus_angle = angle; }
+        } else if (param_name == "focusDist") {
+          double dist;
+          if (iss >> dist) { cam.focus_dist = dist; }
+        }
+        continue;
+      }
+
+      // Reset the stream to process non-camera lines
+      iss.clear();
+      iss.seekg(0);
+
       double x, y, z, radius;
       std::string material_type;
       if (!(iss >> x >> y >> z >> radius >> material_type)) {
@@ -67,26 +126,13 @@ int main(int argc, char * argv[]) {
         double index;
         if (!(iss >> index)) { continue; }
         sphere_material = make_shared<dielectric>(index);
+      } else {
+        continue;  // Skip unknown material types
       }
       point3 center(x, y, z);
       world.add(make_shared<sphere>(center, radius, sphere_material));
     }
   }
-
-  camera cam;
-
-  cam.aspect_ratio      = 16.0 / 9.0;
-  cam.image_width       = 800;
-  cam.samples_per_pixel = 50;
-  cam.max_depth         = 50;
-
-  cam.vfov     = 20;
-  cam.lookfrom = point3(13, 2, 3);
-  cam.lookat   = point3(0, 0, 0);
-  cam.vup      = vec3(0, 1, 0);
-
-  cam.defocus_angle = 0.6;
-  cam.focus_dist    = 10.0;
 
   cam.render(world);
 }

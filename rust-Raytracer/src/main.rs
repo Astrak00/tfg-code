@@ -21,8 +21,9 @@ use material::{Dielectric, Lambertian, Metal};
 use utils::random_double;
 use vec3::{Color, Point3, Vec3};
 
-fn create_world_from_file(filepath: &str) -> io::Result<HittableList> {
+fn create_world_from_file(filepath: &str) -> io::Result<(HittableList, Camera)> {
     let mut world = HittableList::new();
+    let mut cam = Camera::new();
 
     // Add ground sphere
     let ground_material = Arc::new(Lambertian::new(Color::new(0.5, 0.5, 0.5)));
@@ -44,6 +45,79 @@ fn create_world_from_file(filepath: &str) -> io::Result<HittableList> {
         }
 
         let parts: Vec<&str> = line.split_whitespace().collect();
+
+        // Check if this is a camera parameter
+        if parts.len() >= 2 && parts[0] == "c" {
+            match parts[1] {
+                "ratio" if parts.len() >= 4 => {
+                    if let (Ok(width), Ok(height)) =
+                        (parts[2].parse::<f64>(), parts[3].parse::<f64>())
+                    {
+                        cam.aspect_ratio = width / height;
+                    }
+                }
+                "width" if parts.len() >= 3 => {
+                    if let Ok(width) = parts[2].parse::<usize>() {
+                        cam.image_width = width;
+                    }
+                }
+                "samplesPerPixel" if parts.len() >= 3 => {
+                    if let Ok(samples) = parts[2].parse::<usize>() {
+                        cam.samples_per_pixel = samples;
+                    }
+                }
+                "maxDepth" if parts.len() >= 3 => {
+                    if let Ok(depth) = parts[2].parse::<usize>() {
+                        cam.max_depth = depth;
+                    }
+                }
+                "vfov" if parts.len() >= 3 => {
+                    if let Ok(vfov) = parts[2].parse::<f64>() {
+                        cam.vfov = vfov;
+                    }
+                }
+                "lookFrom" if parts.len() >= 5 => {
+                    if let (Ok(x), Ok(y), Ok(z)) = (
+                        parts[2].parse::<f64>(),
+                        parts[3].parse::<f64>(),
+                        parts[4].parse::<f64>(),
+                    ) {
+                        cam.look_from = Point3::new(x, y, z);
+                    }
+                }
+                "lookAt" if parts.len() >= 5 => {
+                    if let (Ok(x), Ok(y), Ok(z)) = (
+                        parts[2].parse::<f64>(),
+                        parts[3].parse::<f64>(),
+                        parts[4].parse::<f64>(),
+                    ) {
+                        cam.look_at = Point3::new(x, y, z);
+                    }
+                }
+                "vup" if parts.len() >= 5 => {
+                    if let (Ok(x), Ok(y), Ok(z)) = (
+                        parts[2].parse::<f64>(),
+                        parts[3].parse::<f64>(),
+                        parts[4].parse::<f64>(),
+                    ) {
+                        cam.vup = Vec3::new(x, y, z);
+                    }
+                }
+                "defocusAngle" if parts.len() >= 3 => {
+                    if let Ok(angle) = parts[2].parse::<f64>() {
+                        cam.defocus_angle = angle;
+                    }
+                }
+                "focusDist" if parts.len() >= 3 => {
+                    if let Ok(dist) = parts[2].parse::<f64>() {
+                        cam.focus_dist = dist;
+                    }
+                }
+                _ => continue,
+            }
+            continue;
+        }
+
         if parts.len() < 5 {
             continue; // Need at least x, y, z, radius, material_type
         }
@@ -84,7 +158,7 @@ fn create_world_from_file(filepath: &str) -> io::Result<HittableList> {
     }
 
     eprintln!("Loaded world from {}", filepath);
-    Ok(world)
+    Ok((world, cam))
 }
 
 fn random_scene() -> HittableList {
@@ -252,10 +326,27 @@ fn main() -> io::Result<()> {
         .and_then(|pos| args.get(pos + 1).cloned())
         .unwrap_or(default_path);
 
+    // Default Camera setup
+    let mut cam = Camera::new();
+    cam.aspect_ratio = 16.0 / 9.0;
+    cam.image_width = 800;
+    cam.samples_per_pixel = 50; // Less samples for quicker rendering
+    cam.max_depth = 50;
+    cam.vfov = 20.0;
+    cam.look_from = Point3::new(13.0, 2.0, 3.0);
+    cam.look_at = Point3::new(0.0, 0.0, 0.0);
+    cam.vup = Vec3::new(0.0, 1.0, 0.0);
+    cam.defocus_angle = 0.6;
+    cam.focus_dist = 10.0;
+
     // Setup world - either from file or randomly generated
     let world = if Path::new(&filepath).exists() {
         match create_world_from_file(&filepath) {
-            Ok(w) => w,
+            Ok((w, file_cam)) => {
+                // Use the camera settings from the file
+                cam = file_cam;
+                w
+            }
             Err(e) => {
                 eprintln!("Error reading from {}: {}", filepath, e);
                 eprintln!("Generating random scene instead.");
@@ -269,23 +360,6 @@ fn main() -> io::Result<()> {
         );
         random_scene()
     };
-
-    // Camera
-    let mut cam = Camera::new();
-    cam.aspect_ratio = 16.0 / 9.0;
-    cam.image_width = 800;
-    cam.samples_per_pixel = 50; // Less samples for quicker rendering
-    cam.max_depth = 50;
-    cam.vfov = 20.0;
-
-    // Camera position and orientation
-    cam.look_from = Point3::new(13.0, 2.0, 3.0);
-    cam.look_at = Point3::new(0.0, 0.0, 0.0);
-    cam.vup = Vec3::new(0.0, 1.0, 0.0);
-
-    // Defocus blur
-    cam.defocus_angle = 0.6;
-    cam.focus_dist = 10.0;
 
     // Render the scene
     let stderr = io::stderr();

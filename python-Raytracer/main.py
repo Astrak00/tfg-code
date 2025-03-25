@@ -12,6 +12,7 @@ from utils import random_double
 def create_world_from_file(filepath):
     """Create world from a scene description file"""
     world = HittableList()
+    cam = Camera()
 
     # Add ground sphere
     ground_material = Lambertian(Color(0.5, 0.5, 0.5))
@@ -27,6 +28,32 @@ def create_world_from_file(filepath):
                     continue
 
                 parts = line.split()
+                
+                # Check if this is a camera parameter
+                if line.startswith("c ") and len(parts) >= 3:
+                    param_name = parts[1]
+                    if param_name == "ratio" and len(parts) >= 4:
+                        cam.aspect_ratio = float(parts[2]) / float(parts[3])
+                    elif param_name == "width" and len(parts) >= 3:
+                        cam.image_width = int(parts[2])
+                    elif param_name == "samplesPerPixel" and len(parts) >= 3:
+                        cam.samples_per_pixel = int(parts[2])
+                    elif param_name == "maxDepth" and len(parts) >= 3:
+                        cam.max_depth = int(parts[2])
+                    elif param_name == "vfov" and len(parts) >= 3:
+                        cam.vfov = float(parts[2])
+                    elif param_name == "lookFrom" and len(parts) >= 5:
+                        cam.look_from = Point3(float(parts[2]), float(parts[3]), float(parts[4]))
+                    elif param_name == "lookAt" and len(parts) >= 5:
+                        cam.look_at = Point3(float(parts[2]), float(parts[3]), float(parts[4]))
+                    elif param_name == "vup" and len(parts) >= 5:
+                        cam.vup = Vec3(float(parts[2]), float(parts[3]), float(parts[4]))
+                    elif param_name == "defocusAngle" and len(parts) >= 3:
+                        cam.defocus_angle = float(parts[2])
+                    elif param_name == "focusDist" and len(parts) >= 3:
+                        cam.focus_dist = float(parts[2])
+                    continue
+
                 if len(parts) < 5:
                     continue  # Need at least x, y, z, radius, material_type
 
@@ -61,10 +88,10 @@ def create_world_from_file(filepath):
                     continue  # Skip invalid material types or insufficient parameters
 
         print(f"Loaded world from {filepath}", file=sys.stderr)
-        return world
+        return world, cam
     except Exception as e:
         print(f"Error reading from {filepath}: {e}", file=sys.stderr)
-        return None
+        return None, None
 
 
 def random_scene():
@@ -174,10 +201,26 @@ def main():
         if sys.argv[i] == "--path" and i + 1 < len(sys.argv):
             filepath = sys.argv[i + 1]
 
+    # Default camera setup
+    cam = Camera()
+    
+    cam.aspect_ratio = 16.0 / 9.0
+    cam.image_width = 800
+    cam.samples_per_pixel = 50  # Less samples for quicker rendering
+    cam.max_depth = 50
+    cam.vfov = 20.0
+    cam.look_from = Point3(13.0, 2.0, 3.0)
+    cam.look_at = Point3(0.0, 0.0, 0.0)
+    cam.vup = Vec3(0.0, 1.0, 0.0)
+    cam.defocus_angle = 0.6
+    cam.focus_dist = 10.0
+
     # Setup world - either from file or randomly generated
     world = None
     if os.path.exists(filepath):
-        world = create_world_from_file(filepath)
+        world, file_cam = create_world_from_file(filepath)
+        if file_cam is not None:
+            cam = file_cam
 
     if world is None:
         print(
@@ -185,23 +228,6 @@ def main():
             file=sys.stderr,
         )
         world = random_scene()
-
-    # Camera setup
-    cam = Camera()
-    cam.aspect_ratio = 16.0 / 9.0
-    cam.image_width = 800
-    cam.samples_per_pixel = 50  # Less samples for quicker rendering
-    cam.max_depth = 50
-    cam.vfov = 20.0
-
-    # Camera position and orientation
-    cam.look_from = Point3(13.0, 2.0, 3.0)
-    cam.look_at = Point3(0.0, 0.0, 0.0)
-    cam.vup = Vec3(0.0, 1.0, 0.0)
-
-    # Defocus blur
-    cam.defocus_angle = 0.6
-    cam.focus_dist = 10.0
 
     # Determine the number of threads to use
     num_threads = os.environ.get("OMP_NUM_THREADS")
@@ -212,6 +238,9 @@ def main():
             num_threads = multiprocessing.cpu_count()
     else:
         num_threads = multiprocessing.cpu_count()
+
+    # print the camera parameters
+    # print(f"Camera parameters: {cam}", file=sys.stderr)
 
     # Render the scene
     cam.render(world, sys.stdout, num_threads)
