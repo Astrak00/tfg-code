@@ -9,6 +9,7 @@
 // along with this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //==============================================================================================
 #include "rtweekend.h"
+
 #include "camera.h"
 #include "hittable.h"
 #include "hittable_list.h"
@@ -25,7 +26,7 @@ int main(int argc, char * argv[]) {
 
   // Process command-line arguments
   for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "--path") == 0) {
+    if (std::string(argv[i]) == "--path") {
       if (i + 1 < argc) {
         sphere_data_path = argv[i + 1];
         i++;  // Skip the next argument (the path value)
@@ -48,8 +49,8 @@ int main(int argc, char * argv[]) {
   cam.defocus_angle     = 0.6;
   cam.focus_dist        = 10.0;
 
-  auto ground_material = make_shared<lambertian>(color(0.5, 0.5, 0.5));
-  world.add(make_shared<sphere>(point3(0, -1000, 0), 1000, ground_material));
+  // auto ground_material = make_shared<lambertian>(color(0.5, 0.5, 0.5));
+  // world.add(make_shared<sphere>(point3(0, -1000, 0), 1000, ground_material));
 
   {
     std::ifstream infile(sphere_data_path);
