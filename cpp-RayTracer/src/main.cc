@@ -16,7 +16,7 @@
 #include "material.h"
 #include "sphere.h"
 
-#if defined(_OPENMP)
+#ifdef _OPENMP
   #include <omp.h>
 #endif
 #include <fstream>

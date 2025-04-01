@@ -101,7 +101,10 @@ class dielectric : public material {
         // Use Schlick's approximation for reflectance.
         auto r0 = (1 - refraction_index) / (1 + refraction_index);
         r0 = r0*r0;
-        return r0 + (1-r0)*std::pow((1 - cosine),5);
+        double one_minus_cos = 1.0 - cosine;
+        double one_minus_cos2 = one_minus_cos * one_minus_cos;
+        double one_minus_cos5 = one_minus_cos2 * one_minus_cos2 * one_minus_cos;
+        return r0 + (1 - r0) * one_minus_cos5;
     }
 };
 

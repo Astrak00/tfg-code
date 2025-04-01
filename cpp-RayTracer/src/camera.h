@@ -36,26 +36,23 @@ class camera {
       // Create image to store pixels
       Image image(image_width, image_height);
 
-      int processed_lines = 0;
-
 #if defined(_OPENMP)
       std::clog << "Using OpenMP for parallel rendering.\n";
 #else
       std::clog << "Using single-threaded rendering.\n";
 #endif
-      for (int j = 0; j < image_height; j++) {
-        std::clog << "\r\033[KScanlines remaining: " << (image_height - processed_lines) << ' '
-                  << std::flush;
-#pragma omp parallel for //shared(processed_lines)
-        for (int i = 0; i < image_width; i++) {
-          color pixel_color(0, 0, 0);
-          for (int sample = 0; sample < samples_per_pixel; sample++) {
-            ray r        = get_ray(i, j);
-            pixel_color += ray_color(r, max_depth, world);
-          }
-          image.pixel(i, j) = pixel_samples_scale * pixel_color;
+#pragma omp parallel for schedule(dynamic, 1) default(none) \
+        shared(image, world) \
+        firstprivate(samples_per_pixel, max_depth, image_width, image_height)
+      for (int pixel = 0; pixel < image_width * image_height; pixel++) {
+        int i = pixel % image_width;
+        int j = pixel / image_width;
+        color pixel_color(0, 0, 0);
+        for (int sample = 0; sample < samples_per_pixel; sample++) {
+          ray r        = get_ray(i, j);
+          pixel_color += ray_color(r, max_depth, world);
         }
-        processed_lines++;
+        image.pixel(i, j) = pixel_samples_scale * pixel_color;
       }
 
       // Write the image to standard output

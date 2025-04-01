@@ -44,7 +44,7 @@ cpp-multi:
 		cmake -B build-multi -DCMAKE_BUILD_TYPE=Release -DENABLE_OPENMP=ON && cmake --build build-multi -j; \
 		popd > /dev/null \
 	'
-	$(call run_trace,cpp-RayTracer,C++ Multi,./build-multi/inOneWeekend --cores 10,cpp-multi-RayTracer)
+	$(call run_trace,cpp-RayTracer,C++ Multi,./build-multi/inOneWeekend --cores 14,cpp-multi-RayTracer)
 
 # Go implementations
 go:
