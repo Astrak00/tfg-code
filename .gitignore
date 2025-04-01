@@ -1,6 +1,13 @@
 .vscode/
 .DS_Store
 
+inOneWeekend
+
+# Cmake
+*.swp
+*.cmake
+*Cache*
+
 # Python Code
 .venv
 __pycache__
@@ -25,6 +32,9 @@ Cargo.lock
 CMakeFiles/
 results/
 
+
+# Profiling
+*.prof*
 
 # Report
 
