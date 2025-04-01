@@ -3,7 +3,7 @@ RESULTS_DIR=$(CURDIR)/results
 
 # Helper function to run a ray tracer
 define run_trace
-	@bash -c '\
+	bash -c '\
 		mkdir -p $(RESULTS_DIR); \
 		cd $(1) > /dev/null; \
 		echo "Running $(2) with command $(3)..." && \
@@ -22,42 +22,42 @@ python-multi:
 	$(call run_trace,python-RayTracer,Python Multi,python3 main.py,py-multi-RayTracer)
 
 pypy:
-	@which pypy > /dev/null 2>&1 || (echo "Error: PyPy not found. Please install PyPy or make sure it's in your PATH." && exit 1)
+	bash -c 'which pypy > /dev/null 2>&1 || (echo "Error: PyPy not found. Please install PyPy or make sure it'\''s in your PATH." && exit 1)'
 	$(call run_trace,python-RayTracer,PyPy,MULTITHREADING=1 pypy main.py,pypy-RayTracer)
 
 pypy-multi:
-	@which pypy > /dev/null 2>&1 || (echo "Error: PyPy not found. Please install PyPy or make sure it's in your PATH." && exit 1)
+	bash -c 'which pypy > /dev/null 2>&1 || (echo "Error: PyPy not found. Please install PyPy or make sure it'\''s in your PATH." && exit 1)'
 	$(call run_trace,python-RayTracer,PyPy Multi,pypy main.py,pypy-multi-RayTracer)
 
 # C++ implementations
 cpp:
-	@( \
+	bash -c '\
 		pushd cpp-RayTracer > /dev/null; \
 		cmake -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_OPENMP=OFF && cmake --build build -j; \
 		popd > /dev/null \
-	)
+	'
 	$(call run_trace,cpp-RayTracer,C++,./build/inOneWeekend,cpp-RayTracer)
 
 cpp-multi:
-	@( \
+	bash -c '\
 		pushd cpp-RayTracer > /dev/null; \
 		cmake -B build-multi -DCMAKE_BUILD_TYPE=Release -DENABLE_OPENMP=ON && cmake --build build-multi -j; \
 		popd > /dev/null \
-	)
-	$(call run_trace,cpp-RayTracer,C++ Multi,./build-multi/inOneWeekend,cpp-multi-RayTracer)
+	'
+	$(call run_trace,cpp-RayTracer,C++ Multi,./build-multi/inOneWeekend --cores 10,cpp-multi-RayTracer)
 
 # Go implementations
 go:
-	@(pushd go-RayTracer > /dev/null && go build -o ray-tracer && popd > /dev/null)
+	bash -c 'pushd go-RayTracer > /dev/null && go build -o ray-tracer && popd > /dev/null'
 	$(call run_trace,go-RayTracer,Go,MULTITHREADING=1 ./ray-tracer,go-RayTracer)
 
 go-multi:
-	@(pushd go-RayTracer > /dev/null && go build -o ray-tracer && popd > /dev/null)
+	bash -c 'pushd go-RayTracer > /dev/null && go build -o ray-tracer && popd > /dev/null'
 	$(call run_trace,go-RayTracer,Go Multi,"./ray-tracer",go-multi-RayTracer)
 
 # Rust implementation
 rust:
-	@(pushd rust-RayTracer > /dev/null && cargo build --release && popd > /dev/null)
+	bash -c 'pushd rust-RayTracer > /dev/null && cargo build --release && popd > /dev/null'
 	$(call run_trace,rust-RayTracer,Rust,./target/release/ray-tracer,rust-RayTracer)
 
 # PPM difference tool

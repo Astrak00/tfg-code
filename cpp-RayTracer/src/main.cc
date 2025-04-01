@@ -16,6 +16,9 @@
 #include "material.h"
 #include "sphere.h"
 
+#if defined(_OPENMP)
+  #include <omp.h>
+#endif
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -32,7 +35,17 @@ int main(int argc, char * argv[]) {
         i++;  // Skip the next argument (the path value)
       }
     }
+    #if defined(_OPENMP)
+    if (std::string(argv[i]) == "--cores") {
+      if (i + 1 < argc) {
+        int cores = std::stoi(argv[i + 1]);
+        omp_set_num_threads(cores);
+        i++;  // Skip the next argument (the cores value)
+      }
+    }
+    #endif
   }
+
 
   hittable_list world;
   camera cam;
