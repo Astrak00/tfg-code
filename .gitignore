@@ -1,4 +1,5 @@
 .vscode/
+.idea
 .DS_Store
 
 inOneWeekend
@@ -71,3 +72,7 @@ svg-inkscape/
 _markdown_report
 
 *.pdf
+
+# AI
+libtorch
+build
