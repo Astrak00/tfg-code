@@ -196,10 +196,36 @@ def main():
     """Main entry point for the ray tracer"""
     # Parse command line arguments
     filepath = "sphere_data.txt"
+    output_path = "cpp_spheres.ppm"
+    num_threads = multiprocessing.cpu_count()
 
-    for i in range(1, len(sys.argv)):
+    i = 1
+    while i < len(sys.argv):
         if sys.argv[i] == "--path" and i + 1 < len(sys.argv):
             filepath = sys.argv[i + 1]
+            i += 2
+        elif sys.argv[i] == "--output" and i + 1 < len(sys.argv):
+            output_path = sys.argv[i + 1]
+            i += 2
+        elif sys.argv[i] == "--cores" and i + 1 < len(sys.argv):
+            try:
+                num_threads = int(sys.argv[i + 1])
+                if num_threads <= 0:
+                    raise ValueError("Number of cores must be positive")
+            except ValueError as e:
+                print(f"Error: Invalid number of cores specified: {e}", file=sys.stderr)
+                sys.exit(1)
+            i += 2
+        elif sys.argv[i] == "--help" or sys.argv[i] == "-h":
+            print(f"Usage: {sys.argv[0]} [--path <sphere_data_path>] [--output <output_ppm_path>]")
+            print(f"Default sphere data path: {filepath}")
+            print("Default output: stdout")
+            return
+        else:
+            print(f"Error: Unknown argument: {sys.argv[i]}", file=sys.stderr)
+            print("Use --help for usage information", file=sys.stderr)
+            sys.exit(1)
+            i += 1
 
     # Default camera setup
     cam = Camera()
@@ -229,21 +255,22 @@ def main():
         )
         world = random_scene()
 
-    # Determine the number of threads to use
-    num_threads = os.environ.get("OMP_NUM_THREADS")
-    if num_threads:
+    # Determine the output file or stdout
+    output_file = sys.stdout
+    if output_path:
         try:
-            num_threads = int(num_threads)
-        except ValueError:
-            num_threads = multiprocessing.cpu_count()
-    else:
-        num_threads = multiprocessing.cpu_count()
+            output_file = open(output_path, 'w')
+        except IOError as e:
+            print(f"Error: Could not open output file {output_path}: {e}", file=sys.stderr)
+            sys.exit(1)
 
-    # print the camera parameters
-    # print(f"Camera parameters: {cam}", file=sys.stderr)
-
-    # Render the scene
-    cam.render(world, sys.stdout, num_threads)
+    try:
+        # Render the scene
+        cam.render(world, output_file, num_threads)
+    finally:
+        # Close the output file if it's not stdout
+        if output_file != sys.stdout:
+            output_file.close()
 
 
 if __name__ == "__main__":
