@@ -101,7 +101,7 @@ func checkCameraParameters(cam *Camera, line string) {
 	default:
 		fmt.Println("Unknown camera parameter:", parts[1])
 	}
-	return
+
 }
 
 func createWorldFromFile(filepath string) (HittableList, Camera, error) {
@@ -191,7 +191,7 @@ func createWorldFromFile(filepath string) (HittableList, Camera, error) {
 		return world, cam, err
 	}
 
-	fmt.Errorf("Loaded world from %s\n", filepath)
+	fmt.Printf("Loaded world from %s\n", filepath)
 	return world, cam, nil
 }
 
