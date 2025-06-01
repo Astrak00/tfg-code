@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"math/rand"
 	"os"
 	"runtime"
@@ -272,12 +273,12 @@ func randomScene() HittableList {
 func main() {
 	// Parse command-line arguments
 	filepath := flag.String("path", "sphere_data.txt", "Path to the sphere data file")
+	outputPath := flag.String("output", "", "Output PPM file path (default: stdout)")
+	numThreadsArg := flag.Int("cores", 0, "Number of CPU cores to use (default: all available cores)")
 	flag.Parse()
 
 	numThreads := 1
-
-	numThreadsEnv := os.Getenv("MULTITHREADING")
-	if numThreadsEnv == "" {
+	if *numThreadsArg == 0 {
 		numThreads = runtime.NumCPU()
 	}
 
@@ -298,8 +299,19 @@ func main() {
 		world = randomScene()
 	}
 
-	// Setup and render camera
-	fmt.Fprintf(os.Stderr, "Camera parameters: %v\n", cam)
+	// Determine the output destination
+	var output io.Writer = os.Stdout
+	var outputFile *os.File
+	if *outputPath != "" {
+		var err error
+		outputFile, err = os.Create(*outputPath)
+		if err != nil {
+			fmt.Printf("Error: Could not create output file %s: %v\n", *outputPath, err)
+			os.Exit(1)
+		}
+		defer outputFile.Close()
+		output = outputFile
+	}
 
-	cam.Render(&world, numThreads)
+	cam.Render(&world, output, numThreads)
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"sync"
@@ -111,7 +112,7 @@ func (c *Camera) GetRay(i, j int) Ray {
 }
 
 // Render renders the scene with the given world
-func (c *Camera) Render(world Hittable, numThreads int) {
+func (c *Camera) Render(world Hittable, out io.Writer, numThreads int) {
 	c.Initialize()
 
 	// Create image data
@@ -161,8 +162,8 @@ func (c *Camera) Render(world Hittable, numThreads int) {
 	}
 	fmt.Fprintf(os.Stderr, "\rScanlines remaining: 0 ")
 
-	// Write the image to standard output
-	img.WriteToStream(os.Stdout)
+	// Write the image to provided output
+	img.WriteToStream(out)
 
 	fmt.Fprintf(os.Stderr, "\rDone.                 \n")
 }
