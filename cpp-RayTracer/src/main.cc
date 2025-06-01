@@ -168,6 +168,8 @@ int main(int argc, char * argv[]) {
     point3 center(x, y, z);
     world.add(make_shared<sphere>(center, radius, sphere_material));
   }
+  std::cout << "Loaded world from" << sphere_data_path << "\n";
+  infile.close();
 
   // Create the output path file
   std::ofstream output_ppm_file(output_ppm_path);

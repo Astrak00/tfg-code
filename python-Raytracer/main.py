@@ -28,7 +28,7 @@ def create_world_from_file(filepath):
                     continue
 
                 parts = line.split()
-                
+
                 # Check if this is a camera parameter
                 if line.startswith("c ") and len(parts) >= 3:
                     param_name = parts[1]
@@ -87,10 +87,10 @@ def create_world_from_file(filepath):
                 else:
                     continue  # Skip invalid material types or insufficient parameters
 
-        print(f"Loaded world from {filepath}", file=sys.stderr)
+        print(f"Loaded world from {filepath}")
         return world, cam
     except (FileNotFoundError, IOError) as e:
-        print(f"Error reading from {filepath}: {e}", file=sys.stderr)
+        print(f"Error reading from {filepath}: {e}")
         return None, None
 
 
@@ -187,7 +187,7 @@ def random_scene():
             file.write("-4.0 1.0 0.0 1.0 lambertian 0.4 0.2 0.1\n")
             file.write("4.0 1.0 0.0 1.0 metal 0.7 0.6 0.5 0.0\n")
     except (IOError, OSError) as e:
-        print(f"Error writing scene to file: {e}", file=sys.stderr)
+        print(f"Error writing scene to file: {e}")
 
     return world
 
@@ -213,7 +213,7 @@ def main():
                 if num_threads <= 0:
                     raise ValueError("Number of cores must be positive")
             except ValueError as e:
-                print(f"Error: Invalid number of cores specified: {e}", file=sys.stderr)
+                print(f"Error: Invalid number of cores specified: {e}")
                 sys.exit(1)
             i += 2
         elif sys.argv[i] == "--help" or sys.argv[i] == "-h":
@@ -222,8 +222,8 @@ def main():
             print("Default output: stdout")
             return
         else:
-            print(f"Error: Unknown argument: {sys.argv[i]}", file=sys.stderr)
-            print("Use --help for usage information", file=sys.stderr)
+            print(f"Error: Unknown argument: {sys.argv[i]}")
+            print("Use --help for usage information")
             sys.exit(1)
             i += 1
 
@@ -250,8 +250,7 @@ def main():
 
     if world is None:
         print(
-            f"File {filepath} not found or error loading. Generating random scene instead.",
-            file=sys.stderr,
+            f"File {filepath} not found or error loading. Generating random scene instead."
         )
         world = random_scene()
 
@@ -261,7 +260,7 @@ def main():
         try:
             output_file = open(output_path, 'w')
         except IOError as e:
-            print(f"Error: Could not open output file {output_path}: {e}", file=sys.stderr)
+            print(f"Error: Could not open output file {output_path}: {e}")
             sys.exit(1)
 
     try:

@@ -317,6 +317,5 @@ func main() {
 		output = outputFile
 	}
 
-	fmt.Println("I'm using ", numThreads, "threads for rendering.")
 	cam.Render(&world, output, numThreads)
 }

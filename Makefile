@@ -112,20 +112,20 @@ go-single: go-build $(RESULTS_DIR)
 # Utility Targets
 # =============================================================================
 
-# .PHONY: ppm-diff
-# ppm-diff:
-# 	@echo "Building PPM difference tool..."
-# 	@mkdir -p helpers/build
-# 	@clang++ -std=c++11 -O2 helpers/ppm_diff.cpp -o helpers/build/ppm_diff
-# 	@echo "PPM difference tool built: helpers/build/ppm_diff"
-# 	@echo "Usage: helpers/build/ppm_diff <file1.ppm> <file2.ppm>"
+.PHONY: ppm-diff
+ppm-diff:
+	@echo "Building PPM difference tool..."
+	@mkdir -p helpers/build
+	@clang++ -std=c++11 -O2 helpers/ppm_diff.cpp -o helpers/build/ppm_diff
+	@echo "PPM difference tool built: helpers/build/ppm_diff"
+	@echo "Usage: helpers/build/ppm_diff <file1.ppm> <file2.ppm>"
 
 # =============================================================================
 # Batch Operations
 # =============================================================================
 
 .PHONY: all all-multi all-single benchmark
-all-multi: cpp go pypy # rustpython
+all-multi: cpp go pypy python # rust
 	@echo ""
 	@echo "========================================="
 	@echo "All multi-threaded implementations completed!"

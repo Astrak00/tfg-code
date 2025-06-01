@@ -155,15 +155,14 @@ class Camera:
         # Create image data
         img = Image(self.image_width, self.image_height)
 
-        print(f"Rendering with {num_threads} threads", file=sys.stderr)
+        print(f"Rendering with {num_threads} threads")
 
         if num_threads <= 1:
             # Single-threaded rendering
             for j in range(self.image_height):
                 print(
                     f"\rScanlines remaining: {self.image_height - j} ",
-                    end="",
-                    file=sys.stderr,
+                    end=""
                 )
                 sys.stderr.flush()
 
@@ -194,18 +193,17 @@ class Camera:
 
                     print(
                         f"\rScanlines remaining: {total_rows - processed_rows} ",
-                        end="",
-                        file=sys.stderr,
+                        end=""
                     )
                     sys.stderr.flush()
 
                     for i in range(self.image_width):
                         img.set_pixel(i, j, row_pixels[i])
 
-        print("\rScanlines remaining: 0 ", end="", file=sys.stderr)
+        print("\rScanlines remaining: 0 ", end="")
 
         # Write the image to the output stream
         img.write_to(out_stream)
 
-        print("\rDone.                 ", file=sys.stderr)
+        print("\rDone.                 ")
         return True
