@@ -120,7 +120,7 @@ func (c *Camera) Render(world Hittable, out io.Writer, numThreads int) {
 
 	if numThreads == 1 {
 		for j := range c.imageHeight {
-			fmt.Fprintf(os.Stderr, "\rScanlines remaining: %d ", c.imageHeight-j)
+			fmt.Fprintf(os.Stdout, "\rScanlines remaining: %d ", c.imageHeight-j)
 			for i := range c.ImageWidth {
 				pixelColor := Color{[3]float64{0, 0, 0}}
 				for range c.SamplesPerPixel {
@@ -155,17 +155,17 @@ func (c *Camera) Render(world Hittable, out io.Writer, numThreads int) {
 				}
 				processed_lines++
 				<-waitChan
-				fmt.Fprintf(os.Stderr, "\rScanlines remaining: %d ", c.imageHeight-processed_lines)
+				fmt.Fprintf(os.Stdout, "\rScanlines remaining: %d ", c.imageHeight-processed_lines)
 			}(j)
 		}
 		wg.Wait()
 	}
-	fmt.Fprintf(os.Stderr, "\rScanlines remaining: 0 ")
+	fmt.Fprintf(os.Stdout, "\rScanlines remaining: 0 ")
 
 	// Write the image to provided output
 	img.WriteToStream(out)
 
-	fmt.Fprintf(os.Stderr, "\rDone.                 \n")
+	fmt.Fprintf(os.Stdout, "\rDone.                 \n")
 }
 
 // sampleSquare returns a random point in the [-0.5,0.5]x[-0.5,0.5] unit square

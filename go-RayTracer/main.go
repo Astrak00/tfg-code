@@ -277,9 +277,13 @@ func main() {
 	numThreadsArg := flag.Int("cores", 0, "Number of CPU cores to use (default: all available cores)")
 	flag.Parse()
 
+	fmt.Println("Cores:", *numThreadsArg)
+
 	numThreads := 1
 	if *numThreadsArg == 0 {
 		numThreads = runtime.NumCPU()
+	} else {
+		numThreads = *numThreadsArg
 	}
 
 	// Initialize world - either from file or randomly generated
@@ -313,5 +317,6 @@ func main() {
 		output = outputFile
 	}
 
+	fmt.Println("I'm using ", numThreads, "threads for rendering.")
 	cam.Render(&world, output, numThreads)
 }
