@@ -5,6 +5,8 @@
 #include "image.h"
 #include "material.h"
 
+#include <mutex>
+
 class camera {
   public:
     double aspect_ratio   = 1.0;  // Ratio of image width over height
@@ -31,11 +33,23 @@ class camera {
 #else
       std::clog << "Using single-threaded rendering.\n";
 #endif
-#pragma omp parallel for schedule(dynamic, 1) default(none) shared(image, world) \
+
+      std::atomic<int> lines_remaining(image_height);
+      std::mutex cout_mutex;
+
+#pragma omp parallel for schedule(dynamic, 1) default(none)      \
+    shared(image, world, lines_remaining, cout_mutex, std::cout) \
     firstprivate(samples_per_pixel, max_depth, image_width, image_height)
       for (int pixel = 0; pixel < image_width * image_height; pixel++) {
         int i = pixel % image_width;
         int j = pixel / image_width;
+
+        if (i == 0) {
+          int remaining = lines_remaining.fetch_sub(1);
+          std::lock_guard<std::mutex> lock(cout_mutex);
+          std::cout << "\rScanlines remaining: " << remaining << ' ' << std::flush;
+        }
+
         color pixel_color(0, 0, 0);
         for (int sample = 0; sample < samples_per_pixel; sample++) {
           ray r        = get_ray(i, j);
