@@ -1,15 +1,5 @@
 #ifndef CAMERA_H
 #define CAMERA_H
-//==============================================================================================
-// Originally written in 2016 by Peter Shirley <ptrshrl@gmail.com>
-//
-// To the extent possible under law, the author(s) have dedicated all copyright and related and
-// neighboring rights to this software to the public domain worldwide. This software is
-// distributed without any warranty.
-//
-// You should have received a copy (see file COPYING.txt) of the CC0 Public Domain Dedication
-// along with this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
-//==============================================================================================
 
 #include "hittable.h"
 #include "image.h"
@@ -30,7 +20,7 @@ class camera {
     double defocus_angle = 0;   // Variation angle of rays through each pixel
     double focus_dist    = 10;  // Distance from camera lookfrom point to plane of perfect focus
 
-    void render(hittable const & world) {
+    void render(hittable const & world, std::ostream & out) {
       initialize();
 
       // Create image to store pixels
@@ -41,9 +31,8 @@ class camera {
 #else
       std::clog << "Using single-threaded rendering.\n";
 #endif
-#pragma omp parallel for schedule(dynamic, 1) default(none) \
-        shared(image, world) \
-        firstprivate(samples_per_pixel, max_depth, image_width, image_height)
+#pragma omp parallel for schedule(dynamic, 1) default(none) shared(image, world) \
+    firstprivate(samples_per_pixel, max_depth, image_width, image_height)
       for (int pixel = 0; pixel < image_width * image_height; pixel++) {
         int i = pixel % image_width;
         int j = pixel / image_width;
@@ -55,8 +44,8 @@ class camera {
         image.pixel(i, j) = pixel_samples_scale * pixel_color;
       }
 
-      // Write the image to standard output
-      image.write_to_stream(std::cout);
+      // Write the image to the file stream.
+      image.write_to_stream(out);
 
       std::clog << "\rDone.                 \n";
     }
