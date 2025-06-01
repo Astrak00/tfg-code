@@ -1,97 +1,216 @@
-# Directories
-RESULTS_DIR=$(CURDIR)/results
+# Configuration
+RESULTS_DIR := $(CURDIR)/results
+CORES := 14
+SPHERE_DATA := sphere_data.txt
 
-# Helper function to run a ray tracer
-define run_trace
-	bash -c '\
-		mkdir -p $(RESULTS_DIR); \
-		cd $(1) > /dev/null; \
-		echo "Running $(2) with command $(3)..." && \
-		{ time $(3) --path ../sphere_data.txt > $(RESULTS_DIR)/$(4).ppm; } 2> $(RESULTS_DIR)/$(4).time; \
-		echo "Running $(2) with command $(3) completed." && \
-		tail -n 3 $(RESULTS_DIR)/$(4).time > $(RESULTS_DIR)/$(4).time.tmp && mv $(RESULTS_DIR)/$(4).time.tmp $(RESULTS_DIR)/$(4).time; \
-		cd - > /dev/null \
-	'
+# Ensure results directory exists
+$(RESULTS_DIR):
+	@mkdir -p $(RESULTS_DIR)
+
+# =============================================================================
+# Helper Functions
+# =============================================================================
+
+# Generic function to run a ray tracer with timing
+# Usage: $(call run_raytracer,directory,description,command,output_name)
+define run_raytracer
+	@echo "========================================="
+	@echo "Running $(2)..."
+	@echo "Command: $(3)"
+	@echo "========================================="
+	@cd $(1) && \
+	{ time $(3) --output $(RESULTS_DIR)/$(4).ppm --cores $(CORES) --path ../$(SPHERE_DATA); } 2> $(RESULTS_DIR)/$(4).time
+	@echo "$(2) completed successfully!"
+	@echo ""
 endef
 
-# Python implementations
-python:
-	$(call run_trace,python-RayTracer,Python,MULTITHREADING=1 python3 main.py,py-RayTracer)
+# Function for single-threaded runs
+# Usage: $(call run_raytracer_single,directory,description,command,output_name)
+define run_raytracer_single
+	@echo "========================================="
+	@echo "Running $(2) (Single-threaded)..."
+	@echo "Command: $(3)"
+	@echo "========================================="
+	@cd $(1) && \
+	{ time $(3) --output ../$(RESULTS_DIR)/$(4).ppm --cores 1 ../$(SPHERE_DATA); } 2> ../$(RESULTS_DIR)/$(4).time
+	@echo "$(2) completed successfully!"
+	@tail -n 3 $(RESULTS_DIR)/$(4).time > $(RESULTS_DIR)/$(4).time.tmp && \
+	mv $(RESULTS_DIR)/$(4).time.tmp $(RESULTS_DIR)/$(4).time
+	@echo ""
+endef
 
-python-multi:
-	$(call run_trace,python-RayTracer,Python Multi,python3 main.py,py-multi-RayTracer)
+# =============================================================================
+# Python Implementations
+# =============================================================================
 
-pypy:
-	bash -c 'which pypy > /dev/null 2>&1 || (echo "Error: PyPy not found. Please install PyPy or make sure it'\''s in your PATH." && exit 1)'
-	$(call run_trace,python-RayTracer,PyPy,MULTITHREADING=1 pypy main.py,pypy-RayTracer)
+.PHONY: python python-single pypy pypy-single
+python: $(RESULTS_DIR)
+	$(call run_raytracer,python-Raytracer,Python Multi-threaded,python3 main.py,python-multi)
 
-pypy-multi:
-	bash -c 'which pypy > /dev/null 2>&1 || (echo "Error: PyPy not found. Please install PyPy or make sure it'\''s in your PATH." && exit 1)'
-	$(call run_trace,python-RayTracer,PyPy Multi,pypy main.py,pypy-multi-RayTracer)
+python-single: $(RESULTS_DIR)
+	$(call run_raytracer_single,python-Raytracer,Python Single-threaded,python3 main.py,python-single)
 
-# C++ implementations
-cpp:
-	bash -c '\
-		pushd cpp-RayTracer > /dev/null; \
-		cmake -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_OPENMP=OFF && cmake --build build -j; \
-		popd > /dev/null \
-	'
-	$(call run_trace,cpp-RayTracer,C++,./build/inOneWeekend,cpp-RayTracer)
+pypy: $(RESULTS_DIR)
+	@which pypy3 > /dev/null 2>&1 || { echo "Error: PyPy not found. Please install PyPy."; exit 1; }
+	$(call run_raytracer,python-Raytracer,PyPy Multi-threaded,pypy3 main.py,pypy-multi)
 
-cpp-multi:
-	bash -c '\
-		pushd cpp-RayTracer > /dev/null; \
-		cmake -B build-multi -DCMAKE_BUILD_TYPE=Release -DENABLE_OPENMP=ON && cmake --build build-multi -j; \
-		popd > /dev/null \
-	'
-	$(call run_trace,cpp-RayTracer,C++ Multi,./build-multi/inOneWeekend --cores 14,cpp-multi-RayTracer)
+pypy-single: $(RESULTS_DIR)
+	@which pypy3 > /dev/null 2>&1 || { echo "Error: PyPy not found. Please install PyPy."; exit 1; }
+	$(call run_raytracer_single,python-Raytracer,PyPy Single-threaded,pypy3 main.py,pypy-single)
 
-# Go implementations
-go:
-	bash -c 'pushd go-RayTracer > /dev/null && go build -o ray-tracer && popd > /dev/null'
-	$(call run_trace,go-RayTracer,Go,MULTITHREADING=1 ./ray-tracer,go-RayTracer)
+# =============================================================================
+# C++ Implementations
+# =============================================================================
 
-go-multi:
-	bash -c 'pushd go-RayTracer > /dev/null && go build -o ray-tracer && popd > /dev/null'
-	$(call run_trace,go-RayTracer,Go Multi,"./ray-tracer",go-multi-RayTracer)
+.PHONY: cpp cpp-single cpp-build
+cpp-build:
+	@echo "Building C++ ray tracer (Release mode with OpenMP)..."
+	@cd cpp-RayTracer && \
+	cmake -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_OPENMP=ON && \
+	cmake --build build -j$(CORES)
+	@echo "C++ build completed."
 
-# Rust implementation
-rust:
-	bash -c 'pushd rust-RayTracer > /dev/null && cargo build --release && popd > /dev/null'
-	$(call run_trace,rust-RayTracer,Rust,./target/release/ray-tracer,rust-RayTracer)
+cpp: cpp-build $(RESULTS_DIR)
+	$(call run_raytracer,cpp-RayTracer,C++ Multi-threaded,./build/inOneWeekend,cpp-multi)
 
-# PPM difference tool
-ppm-diff:
-	@mkdir -p helpers/build
-	@clang++ -std=c++11 -O2 helpers/ppm_diff.cpp -o helpers/build/ppm_diff
-	@echo "PPM difference tool built: helpers/build/ppm_diff"
-	@echo "Usage: helpers/build/ppm_diff <file1.ppm> <file2.ppm>"
+cpp-single: cpp-build $(RESULTS_DIR)
+	$(call run_raytracer_single,cpp-RayTracer,C++ Single-threaded,./build/inOneWeekend,cpp-single)
 
-# Run all implementations
-all:
-	@echo "Running all implementations..."
-	@echo "Running multicore implementations..."
-	@$(MAKE) go-multi
-	@$(MAKE) cpp-multi
-	@$(MAKE) rust
-	@echo "Running singlecore implementation..."
-	@$(MAKE) cpp
-	@$(MAKE) go
-	@echo "Running *PyPy* implementation..."
-	@$(MAKE) pypy
-	@$(MAKE) pypy-multi
-	@echo "Running *Python* implementation..."
-	@$(MAKE) python
-	@$(MAKE) python-multi
+# =============================================================================
+# Go Implementations
+# =============================================================================
 
-	@echo "All implementations completed."
-	@echo "Generated images:"
-	@ls -lh $(RESULTS_DIR)/*.ppm
-	@echo "You can view the images using an image viewer."
+.PHONY: go go-single go-build
+go-build:
+	@echo "Building Go ray tracer..."
+	@cd go-RayTracer && go build -o ray-tracer
+	@echo "Go build completed."
 
-# Clean results
+go: go-build $(RESULTS_DIR)
+	$(call run_raytracer,go-RayTracer,Go Multi-threaded,./ray-tracer,go-multi)
+
+go-single: go-build $(RESULTS_DIR)
+	$(call run_raytracer_single,go-RayTracer,Go Single-threaded,./ray-tracer,go-single)
+
+# =============================================================================
+# Rust Implementations
+# =============================================================================
+
+# .PHONY: rust rust-single rust-build
+# rust-build:
+# 	@echo "Building Rust ray tracer (Release mode)..."
+# 	@cd rust-Raytracer && cargo build --release
+# 	@echo "Rust build completed."
+
+# rust: rust-build $(RESULTS_DIR)
+# 	$(call run_raytracer,rust-Raytracer,Rust Multi-threaded,./target/release/ray-tracer,rust-multi)
+
+# rust-single: rust-build $(RESULTS_DIR)
+# 	$(call run_raytracer_single,rust-Raytracer,Rust Single-threaded,./target/release/ray-tracer,rust-single)
+
+# =============================================================================
+# Utility Targets
+# =============================================================================
+
+# .PHONY: ppm-diff
+# ppm-diff:
+# 	@echo "Building PPM difference tool..."
+# 	@mkdir -p helpers/build
+# 	@clang++ -std=c++11 -O2 helpers/ppm_diff.cpp -o helpers/build/ppm_diff
+# 	@echo "PPM difference tool built: helpers/build/ppm_diff"
+# 	@echo "Usage: helpers/build/ppm_diff <file1.ppm> <file2.ppm>"
+
+# =============================================================================
+# Batch Operations
+# =============================================================================
+
+.PHONY: all all-multi all-single benchmark
+all-multi: cpp go pypy # rustpython
+	@echo ""
+	@echo "========================================="
+	@echo "All multi-threaded implementations completed!"
+	@echo "========================================="
+	@echo "Generated images and timing data:"
+	@ls -lh $(RESULTS_DIR)/*.ppm 2>/dev/null || echo "No PPM files found"
+	@ls -lh $(RESULTS_DIR)/*.time 2>/dev/null || echo "No timing files found"
+
+all-single: cpp-single go-single python-single pypy-single # rust-single
+	@echo ""
+	@echo "========================================="
+	@echo "All single-threaded implementations completed!"
+	@echo "========================================="
+	@echo "Generated images and timing data:"
+	@ls -lh $(RESULTS_DIR)/*.ppm 2>/dev/null || echo "No PPM files found"
+	@ls -lh $(RESULTS_DIR)/*.time 2>/dev/null || echo "No timing files found"
+
+all: all-multi all-single
+	@echo ""
+	@echo "========================================="
+	@echo "Complete benchmark suite finished!"
+	@echo "========================================="
+
+benchmark: all
+	@echo "Performance comparison ready!"
+	@echo "Check $(RESULTS_DIR)/ for results."
+
+# =============================================================================
+# Cleanup
+# =============================================================================
+
+.PHONY: clean clean-builds clean-all
 clean:
-	@echo "Cleaning up..."
-	@rm -f $(RESULTS_DIR)/*.ppm
-	@rm -f $(RESULTS_DIR)/*.time
-	@echo "Cleaned up."
+	@echo "Cleaning results..."
+	@rm -rf $(RESULTS_DIR)/*.ppm $(RESULTS_DIR)/*.time 2>/dev/null || true
+	@echo "Results cleaned."
+
+clean-builds:
+	@echo "Cleaning build artifacts..."
+	@rm -rf cpp-RayTracer/build* || true
+	@rm -rf go-RayTracer/ray-tracer || true
+	@rm -rf helpers/build || true
+	@echo "Build artifacts cleaned."
+
+clean-all: clean clean-builds
+	@echo "Full cleanup completed."
+
+# =============================================================================
+# Help and Information
+# =============================================================================
+
+.PHONY: help info
+help:
+	@echo "Ray Tracer Performance Comparison Makefile"
+	@echo ""
+	@echo "Individual Language Targets:"
+	@echo "  python        - Run Python multi-threaded implementation"
+	@echo "  python-single - Run Python single-threaded implementation"
+	@echo "  pypy          - Run PyPy multi-threaded implementation"
+	@echo "  pypy-single   - Run PyPy single-threaded implementation"
+	@echo "  cpp           - Build and run C++ multi-threaded implementation"
+	@echo "  cpp-single    - Build and run C++ single-threaded implementation"
+	@echo "  go            - Build and run Go multi-threaded implementation"
+	@echo "  go-single     - Build and run Go single-threaded implementation"
+	@echo ""
+	@echo "Batch Targets:"
+	@echo "  all-multi     - Run all multi-threaded implementations"
+	@echo "  all-single    - Run all single-threaded implementations"
+	@echo "  all           - Run complete benchmark suite"
+	@echo "  benchmark     - Alias for 'all'"
+	@echo ""
+	@echo "Utility Targets:"
+	@echo "  ppm-diff      - Build PPM comparison tool"
+	@echo "  clean         - Remove generated results"
+	@echo "  clean-builds  - Remove build artifacts"
+	@echo "  clean-all     - Remove results and build artifacts"
+	@echo "  help          - Show this help message"
+	@echo "  info          - Show current configuration"
+
+info:
+	@echo "Current Configuration:"
+	@echo "  Results Directory: $(RESULTS_DIR)"
+	@echo "  CPU Cores:         $(CORES)"
+	@echo "  Sphere Data:       $(SPHERE_DATA)"
+	@echo "  Current Directory: $(CURDIR)"
+
+# Default target
+.DEFAULT_GOAL := help
