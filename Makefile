@@ -6,6 +6,14 @@ SPHERE_DATA := sphere_data.txt
 PERF_COMMAND := perf stat -r 5 -e 'power/energy-pkg/, power/energy-ram/'
 
 
+# Adjust PERF_COMMAND based on core count
+ifeq ($(shell [ $(CORES) -le 15 ] && echo true),true)
+	PERF_COMMAND := taskset -c 0-15 $(PERF_COMMAND)
+else ifeq ($(shell [ $(CORES) -le 31 ] && echo true),true)
+	PERF_COMMAND := taskset -c 0-15,32-47 $(PERF_COMMAND)
+endif
+
+
 # Ensure results directory exists
 $(RESULTS_DIR):
 	@mkdir -p $(RESULTS_DIR)
