@@ -34,6 +34,11 @@ $(RESULTS_DIR):
 define start_powermetrics
 	@if [ "$(MAC_OS)" = "True" ]; then \
 		echo "Starting power metrics collection..."; \
+		if ! sudo -n true 2>/dev/null; then \
+			echo "This operation requires sudo access for powermetrics."; \
+			echo "Please run this program as sudo:"; \
+			exit 1; \
+		fi; \
 		mkdir -p $(RESULTS_DIR)/power; \
 		sudo powermetrics -i $(POWER_INTERVAL) \
 			--samplers cpu_power \
@@ -138,6 +143,8 @@ define build_go
 	@cd go-RayTracer && go build -o ray-tracer
 	@echo "Go build completed"
 endef
+
+
 
 # =============================================================================
 # Language-Specific Targets
