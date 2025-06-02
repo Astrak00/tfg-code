@@ -1,28 +1,25 @@
-#---------------------------------------------------------------------------------------------------
-# CMake Build Configuration for the Ray Tracing Weekend Series
-#
-# See README.md for guidance.
-#---------------------------------------------------------------------------------------------------
-
-cmake_minimum_required ( VERSION 3.1.0...3.27.0 ) # Use a reasonable minimum
+cmake_minimum_required ( VERSION 3.1.0...3.27.0 )
 
 project ( CppRaytracer LANGUAGES CXX )
 
-# Set to C++ Standard (Using C++23 as per your original file)
+
 set ( CMAKE_CXX_STANDARD          23 )
 set ( CMAKE_CXX_STANDARD_REQUIRED ON )
 set ( CMAKE_CXX_EXTENSIONS        OFF )
-# Keep your hardcoded compiler if needed, otherwise comment out for flexibility
+
 set ( CMAKE_CXX_COMPILER          "clang++" )
 #set ( CMAKE_CXX_COMPILER          "g++" )
 
 # --- Standard Release Flags ---
 # Base flags for optimization, separated for clarity
-set(RT_BASE_RELEASE_FLAGS "-O3 -DNDEBUG")
-if (NOT MSVC) # Add flags common to GCC/Clang
+set(RELEASE_FLAGS "-O3 -DNDEBUG")
+if (NOT MSVC) 
     # Using flags from your original file (removed -ffast-math to allow proper infinity handling)
-    set(RT_BASE_RELEASE_FLAGS "${RT_BASE_RELEASE_FLAGS} -mtune=native -march=native")
+    set(RELEASE_FLAGS "${RELEASE_FLAGS} -mtune=native -march=native")
 endif()
+
+# Apply the release flags to CMAKE_CXX_FLAGS_RELEASE
+set(CMAKE_CXX_FLAGS_RELEASE "${RELEASE_FLAGS}")
 
 # --- OpenMP Handling (Robust Method) ---
 option(ENABLE_OPENMP "Enable OpenMP support" OFF)
@@ -73,41 +70,7 @@ else()
     message(STATUS "--> OpenMP is disabled")
 endif()
 
-# --- PGO Flags (GCC and Clang) ---
-set(RT_PGO_GENERATE_FLAGS "")
-set(RT_PGO_USE_FLAGS "")
-# Check compiler ID to set the correct PGO flags
-if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    set(RT_PGO_GENERATE_FLAGS "-fprofile-instr-generate")
-    # Assumes profile data file is named rtweekend.profdata in the build dir
-    set(RT_PGO_USE_FLAGS "-fprofile-instr-use=rtweekend.profdata")
-elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    set(RT_PGO_GENERATE_FLAGS "-fprofile-generate")
-    # GCC uses profile data location implicitly, -fprofile-correction helps
-    set(RT_PGO_USE_FLAGS "-fprofile-use -fprofile-correction")
-endif()
-
-# --- Define Build Type Flags ---
-# Combine base, OpenMP, and PGO flags based on build type
-# Standard Release
-set(CMAKE_CXX_FLAGS_RELEASE "${RT_BASE_RELEASE_FLAGS} ${RT_OPENMP_FLAGS}" CACHE STRING "Flags used by the C++ compiler for Release builds." FORCE)
-# PGO Generate Step
-set(CMAKE_CXX_FLAGS_RELEASE_PGO_GENERATE "${RT_BASE_RELEASE_FLAGS} ${RT_OPENMP_FLAGS} ${RT_PGO_GENERATE_FLAGS}" CACHE STRING "Flags for PGO Instrumentation build." FORCE)
-# PGO Use Step
-set(CMAKE_CXX_FLAGS_RELEASE_PGO_USE "${RT_BASE_RELEASE_FLAGS} ${RT_OPENMP_FLAGS} ${RT_PGO_USE_FLAGS}" CACHE STRING "Flags for PGO Optimized build." FORCE)
-# Standard Debug
-set(CMAKE_CXX_FLAGS_DEBUG "-g -O0" CACHE STRING "Flags used by the C++ compiler for Debug builds." FORCE)
-
-# Add the custom build types to the list CMake knows about (for GUIs, etc.)
-# Set default build type if none is specified (optional, often Release)
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the build type" FORCE)
-endif()
-set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS Debug Release Release_PGO_Generate Release_PGO_Use)
-
-
 # --- Source Files ---
-# List only the main source file needed for the executable
 set ( CPP_RAY_TRACER_SOURCES
   src/main.cc
   src/camera.h
@@ -128,35 +91,27 @@ include_directories(src)
 # --- Compiler Warnings (Preserving your original flags) ---
 message (STATUS "Compiler ID: " ${CMAKE_CXX_COMPILER_ID})
 # Add your specific warning flags here
-if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    # /wd #### - Disable warning
-    # /we #### - treat warning as error
-    add_compile_options("/W4")      # Enable level-4 warnings
-    add_compile_options("/we 4265") # Class has virtual functions, but its non-trivial destructor is not virtual
-    add_compile_options("/we 5204") # Class has virtual functions, but its trivial destructor is not virtual
-    add_compile_options("/wd 4100") # unreferenced formal parameter
-elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    # Consider adding -Wall -Wextra for more warnings
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Considered adding -Wall -Wextra for more warnings
     # add_compile_options(-Wall -Wextra)
-    add_compile_options(-Wnon-virtual-dtor) # Class has virtual functions, but its destructor is not virtual
-    add_compile_options(-Wreorder) # Data member will be initialized after [other] data member
-    add_compile_options(-Wmaybe-uninitialized) # Variable improperly initialized
-    add_compile_options(-Wunused-variable) # Variable is defined but unused
+    add_compile_options(-Wnon-virtual-dtor) 
+    add_compile_options(-Wreorder) 
+    add_compile_options(-Wmaybe-uninitialized) 
+    add_compile_options(-Wunused-variable) 
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    # Consider adding -Wall -Wextra for more warnings
+    # Considered adding -Wall -Wextra for more warnings
     # add_compile_options(-Wall -Wextra)
-    add_compile_options(-Wnon-virtual-dtor) # Class has virtual functions, but its destructor is not virtual
-    add_compile_options(-Wreorder) # Data member will be initialized after [other] data member
-    add_compile_options(-Wsometimes-uninitialized) # Variable improperly initialized (Clang equivalent)
-    add_compile_options(-Wunused-variable) # Variable is defined but unused
+    add_compile_options(-Wnon-virtual-dtor) 
+    add_compile_options(-Wreorder) 
+    add_compile_options(-Wsometimes-uninitialized) 
+    add_compile_options(-Wunused-variable) 
 endif()
 
 # --- Status Messages ---
 # Display the flags being used for different configurations
 message (STATUS "Debug flags: " ${CMAKE_CXX_FLAGS_DEBUG})
 message (STATUS "Release flags: " ${CMAKE_CXX_FLAGS_RELEASE})
-message (STATUS "PGO Generate flags: " ${CMAKE_CXX_FLAGS_RELEASE_PGO_GENERATE})
-message (STATUS "PGO Use flags: " ${CMAKE_CXX_FLAGS_RELEASE_PGO_USE})
 
 # --- Executable ---
 add_executable(raytracer ${CPP_RAY_TRACER_SOURCES})
@@ -170,7 +125,3 @@ if (ENABLE_OPENMP AND OpenMP_CXX_FOUND)
         target_link_libraries(raytracer PUBLIC OpenMP::OpenMP_CXX)
     endif()
 endif()
-
-# --- Optional: Installation ---
-# If you want to install the executable
-# install(TARGETS inOneWeekend DESTINATION bin)
