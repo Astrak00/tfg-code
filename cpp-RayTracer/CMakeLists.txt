@@ -6,7 +6,7 @@
 
 cmake_minimum_required ( VERSION 3.1.0...3.27.0 ) # Use a reasonable minimum
 
-project ( RTWeekend LANGUAGES CXX )
+project ( CppRaytracer LANGUAGES CXX )
 
 # Set to C++ Standard (Using C++23 as per your original file)
 set ( CMAKE_CXX_STANDARD          23 )
@@ -20,8 +20,8 @@ set ( CMAKE_CXX_COMPILER          "clang++" )
 # Base flags for optimization, separated for clarity
 set(RT_BASE_RELEASE_FLAGS "-O3 -DNDEBUG")
 if (NOT MSVC) # Add flags common to GCC/Clang
-    # Using flags from your original file
-    set(RT_BASE_RELEASE_FLAGS "${RT_BASE_RELEASE_FLAGS} -ffast-math -mtune=native -march=native")
+    # Using flags from your original file (removed -ffast-math to allow proper infinity handling)
+    set(RT_BASE_RELEASE_FLAGS "${RT_BASE_RELEASE_FLAGS} -mtune=native -march=native")
 endif()
 
 # --- OpenMP Handling (Robust Method) ---
@@ -108,7 +108,7 @@ set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS Debug Release Release_PGO_G
 
 # --- Source Files ---
 # List only the main source file needed for the executable
-set ( SOURCE_ONE_WEEKEND
+set ( CPP_RAY_TRACER_SOURCES
   src/main.cc
   src/camera.h
   src/color.h
@@ -159,15 +159,15 @@ message (STATUS "PGO Generate flags: " ${CMAKE_CXX_FLAGS_RELEASE_PGO_GENERATE})
 message (STATUS "PGO Use flags: " ${CMAKE_CXX_FLAGS_RELEASE_PGO_USE})
 
 # --- Executable ---
-add_executable(inOneWeekend ${SOURCE_ONE_WEEKEND})
+add_executable(raytracer ${CPP_RAY_TRACER_SOURCES})
 
 # --- Linking ---
 # Link OpenMP libraries if enabled and found
 if (ENABLE_OPENMP AND OpenMP_CXX_FOUND)
     if(DEFINED OPENMP_LINK_LIBRARIES)
-        target_link_libraries(inOneWeekend PUBLIC ${OPENMP_LINK_LIBRARIES})
+        target_link_libraries(raytracer PUBLIC ${OPENMP_LINK_LIBRARIES})
     else()
-        target_link_libraries(inOneWeekend PUBLIC OpenMP::OpenMP_CXX)
+        target_link_libraries(raytracer PUBLIC OpenMP::OpenMP_CXX)
     endif()
 endif()
 

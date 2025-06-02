@@ -1,7 +1,7 @@
 #include "rtweekend.h"
 
 // Only include OpenMP if it's available and enabled
-#if defined(_OPENMP) && defined(ENABLE_OPENMP)
+#if defined(_OPENMP)
   #include <omp.h>
 #endif
 #include <fstream>
@@ -35,13 +35,19 @@ int main(int argc, char * argv[]) {
         return 1;
       }
     }
-#if defined(_OPENMP) && defined(ENABLE_OPENMP)
+
     else if (arg == "--cores") {
       if (i + 1 < argc) {
         try {
           int cores = std::stoi(argv[i + 1]);
           if (cores > 0) {
+#if defined(_OPENMP)
             omp_set_num_threads(cores);
+            std::cout << "Using " << cores << " cores for rendering.\n";
+#else
+            std::cerr << "Warning: OpenMP is not enabled. --cores option will be ignored. Only one "
+                         "core will be used\n";
+#endif
           } else {
             std::cerr << "Error: --cores must be a positive integer\n";
             return 1;
@@ -56,11 +62,11 @@ int main(int argc, char * argv[]) {
         return 1;
       }
     }
-#endif
+
     else if (arg == "--help" || arg == "-h") {
       std::cout << "Usage: " << argv[0]
                 << " [--path <sphere_data_path>] [--output <output_ppm_path>]"
-#if defined(_OPENMP) && defined(ENABLE_OPENMP)
+#if defined(_OPENMP)
                 << " [--cores <num_cores>]"
 #endif
                 << "\n";

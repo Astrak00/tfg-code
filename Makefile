@@ -3,7 +3,8 @@ RESULTS_DIR := $(CURDIR)/results
 CORES := 14
 SPHERE_DATA := sphere_data.txt
 # Command to run performance measurements
-PERF_COMMAND := perf stat -r 5 -e 'power/energy-pkg/, power/energy-ram/' 
+PERF_COMMAND := perf stat -r 5 -e 'power/energy-pkg/, power/energy-ram/'
+
 
 # Ensure results directory exists
 $(RESULTS_DIR):
@@ -22,6 +23,7 @@ define run_raytracer
 	@echo "========================================="
 	@cd $(1) && \
 	{ $(PERF_COMMAND) $(3) --output $(RESULTS_DIR)/$(4).ppm --cores $(CORES) --path ../$(SPHERE_DATA); } 2> $(RESULTS_DIR)/$(4).perf
+	@echo ""
 	@echo "$(2) completed successfully!"
 	@echo ""
 endef
@@ -35,6 +37,7 @@ define run_raytracer_single
 	@echo "========================================="
 	@cd $(1) && \
 	{ $(PERF_COMMAND) $(3) --output $(RESULTS_DIR)/$(4).ppm --cores 1 --path ../$(SPHERE_DATA); } 2> $(RESULTS_DIR)/$(4).perf
+	@echo ""
 	@echo "$(2) completed successfully!"
 	@echo ""
 endef
@@ -71,10 +74,10 @@ cpp-build:
 	@echo "C++ build completed."
 
 cpp: cpp-build $(RESULTS_DIR)
-	$(call run_raytracer,cpp-RayTracer,C++ Multi-threaded,./build/inOneWeekend,cpp-multi)
+	$(call run_raytracer,cpp-RayTracer,C++ Multi-threaded,./build/raytracer,cpp-multi)
 
 cpp-single: cpp-build $(RESULTS_DIR)
-	$(call run_raytracer_single,cpp-RayTracer,C++ Single-threaded,./build/inOneWeekend,cpp-single)
+	$(call run_raytracer_single,cpp-RayTracer,C++ Single-threaded,./build/raytracer,cpp-single)
 
 # =============================================================================
 # Go Implementations

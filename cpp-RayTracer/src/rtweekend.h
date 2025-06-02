@@ -15,7 +15,12 @@ using std::make_shared;
 using std::shared_ptr;
 
 // Constants
+#ifdef __FAST_MATH__
+// When fast-math is enabled, use a very large finite value instead of infinity
+constexpr double infinity = 1e30;
+#else
 constexpr double infinity = std::numeric_limits<double>::infinity();
+#endif
 
 #if __cplusplus >= 202002L
   #include <numbers>
