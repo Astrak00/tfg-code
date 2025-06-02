@@ -9,11 +9,13 @@ RESULTS_DIR           := $(CURDIR)/results-$(CORES)
 SPHERE_DATA           := sphere_data.txt
 POWERMETRICS_PID_FILE := $(RESULTS_DIR)/power/powermetrics.pid
 POWER_LOG             := $(RESULTS_DIR)/power/powermetrics.log
+POWER_TRIMM_LOG       := $(RESULTS_DIR)/power/powermetrics_trimmed.log
 POWER_CLEANED_LOG     := $(RESULTS_DIR)/power/powermetrics_cleaned.log
+POWER_INTERVAL        := 100  # Interval in milliseconds for powermetrics
 
 # Performance measurement commands
 ifeq ($(MAC_OS),True)
-    PERF_COMMAND := time
+    PERF_COMMAND := date +%H:%M:%S::%M; time
 else
     PERF_COMMAND := perf stat -r 5 -e 'power/energy-pkg/,power/energy-ram/'
 endif
@@ -33,7 +35,7 @@ define start_powermetrics
 	@if [ "$(MAC_OS)" = "True" ]; then \
 		echo "Starting power metrics collection..."; \
 		mkdir -p $(RESULTS_DIR)/power; \
-		sudo powermetrics -i 200 \
+		sudo powermetrics -i $(POWER_INTERVAL) \
 			--samplers cpu_power \
 			--hide-cpu-duty-cycle \
 			> $(POWER_LOG) 2>&1 & \
@@ -43,6 +45,7 @@ define start_powermetrics
 	fi
 endef
 
+# Args: $(1)=output_name
 define stop_powermetrics
 	@if [ "$(MAC_OS)" = "True" ] && [ -f $(POWERMETRICS_PID_FILE) ]; then \
 		echo "Stopping power metrics collection..."; \
@@ -51,11 +54,22 @@ define stop_powermetrics
 		echo "Power metrics collection stopped"; \
 	fi
 	@if [ "$(MAC_OS)" = "True" ] && [ -f $(POWER_LOG) ]; then \
+		echo "Processing power log with start time..."; \
+		if [ -f $(RESULTS_DIR)/$(1)_start_time.txt ]; then \
+			start_time=$$(cat $(RESULTS_DIR)/$(1)_start_time.txt); \
+			sed -n "/$$start_time/,\$$p" $(POWER_LOG) > $(POWER_TRIMM_LOG); \
+		else \
+			echo "Start time file not found, using entire log"; \
+			cp $(POWER_LOG) $(POWER_TRIMM_LOG); \
+		fi; \
+	fi
+	@if [ "$(MAC_OS)" = "True" ] && [ -f $(POWER_TRIMM_LOG) ]; then \
 		echo "Cleaning power metrics data..."; \
-		cat $(POWER_LOG) | \
-			grep "CPU Power:" | \
+		grep "CPU Power:" $(POWER_TRIMM_LOG) | \
 			awk '{print $$3}' > $(POWER_CLEANED_LOG); \
 		echo "Cleaned data saved to $(POWER_CLEANED_LOG)"; \
+	else \
+		echo "No power metrics log found or not on Mac OS"; \
 	fi
 endef
 
@@ -72,13 +86,19 @@ define run_raytracer
 	@echo "Command:   $(3)"
 	@echo "Cores:     $(CORES)"
 	@echo "========================================="
-	@cd $(1) && { \
+	@start_time=$$(date +%H:%M:%S); \
+	cd $(1) && { \
 		$(PERF_COMMAND) $(3) \
 			--output $(RESULTS_DIR)/$(4).ppm \
 			--cores $(CORES) \
 			--path ../$(SPHERE_DATA); \
-	} 2> $(RESULTS_DIR)/$(4).perf
-	@echo "$(2) completed successfully!"
+	} 2> $(RESULTS_DIR)/$(4).perf; \
+	end_time=$$(date +%H:%M:%S); \
+	echo "$(2) completed successfully!"; \
+	if [ "$(MAC_OS)" = "True" ]; then \
+		echo "$$start_time" > $(RESULTS_DIR)/$(4)_start_time.txt; \
+		echo "$$end_time" > $(RESULTS_DIR)/$(4)_end_time.txt; \
+	fi;
 endef
 
 # Single-threaded version
@@ -114,7 +134,7 @@ define build_cpp
 endef
 
 define build_go
-	@echo "🔨 Building Go ray tracer..."
+	@echo "Building Go ray tracer..."
 	@cd go-RayTracer && go build -o ray-tracer
 	@echo "Go build completed"
 endef
@@ -129,12 +149,12 @@ endef
 python: $(RESULTS_DIR)
 	$(call start_powermetrics)
 	$(call run_raytracer,python-Raytracer,Python Multi-threaded,python3 main.py,python-multi)
-	$(call stop_powermetrics)
+	$(call stop_powermetrics,python-multi)
 
 python-single: $(RESULTS_DIR)
 	$(call start_powermetrics)
 	$(call run_raytracer_single,python-Raytracer,Python Single-threaded,python3 main.py,python-single)
-	$(call stop_powermetrics)
+	$(call stop_powermetrics,python-single)
 
 pypy: $(RESULTS_DIR)
 	@which pypy3 > /dev/null 2>&1 || { \
@@ -143,7 +163,7 @@ pypy: $(RESULTS_DIR)
 	}
 	$(call start_powermetrics)
 	$(call run_raytracer,python-Raytracer,PyPy Multi-threaded,pypy3 main.py,pypy-multi)
-	$(call stop_powermetrics)
+	$(call stop_powermetrics,pypy-multi)
 
 pypy-single: $(RESULTS_DIR)
 	@which pypy3 > /dev/null 2>&1 || { \
@@ -152,7 +172,7 @@ pypy-single: $(RESULTS_DIR)
 	}
 	$(call start_powermetrics)
 	$(call run_raytracer_single,python-Raytracer,PyPy Single-threaded,pypy3 main.py,pypy-single)
-	$(call stop_powermetrics)
+	$(call stop_powermetrics,pypy-single)
 
 # C++ Implementations
 .PHONY: cpp cpp-single cpp-build
@@ -163,12 +183,12 @@ cpp-build:
 cpp: cpp-build $(RESULTS_DIR)
 	$(call start_powermetrics)
 	$(call run_raytracer,cpp-RayTracer,C++ Multi-threaded,./build/raytracer,cpp-multi)
-	$(call stop_powermetrics)
+	$(call stop_powermetrics,cpp-multi)
 
 cpp-single: cpp-build $(RESULTS_DIR)
 	$(call start_powermetrics)
 	$(call run_raytracer_single,cpp-RayTracer,C++ Single-threaded,./build/raytracer,cpp-single)
-	$(call stop_powermetrics)
+	$(call stop_powermetrics,cpp-single)
 
 # Go Implementations
 .PHONY: go go-single go-build
@@ -179,12 +199,12 @@ go-build:
 go: go-build $(RESULTS_DIR)
 	$(call start_powermetrics)
 	$(call run_raytracer,go-RayTracer,Go Multi-threaded,./ray-tracer,go-multi)
-	$(call stop_powermetrics)
+	$(call stop_powermetrics,go-multi)
 
 go-single: go-build $(RESULTS_DIR)
 	$(call start_powermetrics)
 	$(call run_raytracer_single,go-RayTracer,Go Single-threaded,./ray-tracer,go-single)
-	$(call stop_powermetrics)
+	$(call stop_powermetrics,go-single)
 
 # Rust Implementations
 # .PHONY: rust rust-single rust-build
@@ -197,12 +217,14 @@ go-single: go-build $(RESULTS_DIR)
 # rust: rust-build $(RESULTS_DIR)
 # 	$(call start_powermetrics)
 # 	$(call run_raytracer,rust-Raytracer,Rust Multi-threaded,./target/release/ray-tracer,rust-multi)
-# 	$(call stop_powermetrics)
+# 	$(call stop_powermetrics,rust-multi)
+
 
 # rust-single: rust-build $(RESULTS_DIR)
 # 	$(call start_powermetrics)
 # 	$(call run_raytracer_single,rust-Raytracer,Rust Single-threaded,./target/release/ray-tracer,rust-single)
-# 	$(call stop_powermetrics)
+# 	$(call stop_powermetrics,rust-single)
+
 
 # =============================================================================
 # Batch Operations
@@ -210,17 +232,7 @@ go-single: go-build $(RESULTS_DIR)
 
 .PHONY: all all-multi all-single benchmark
 
-all-multi: $(RESULTS_DIR)
-	@echo "Starting multi-threaded benchmark suite..."
-	$(call start_powermetrics)
-	@$(MAKE) cpp-build go-build
-	$(call run_raytracer,cpp-RayTracer,C++ Multi-threaded,./build/raytracer,cpp-multi)
-	$(call run_raytracer,go-RayTracer,Go Multi-threaded,./ray-tracer,go-multi)
-	@which pypy3 > /dev/null 2>&1 && \
-		$(call run_raytracer,python-Raytracer,PyPy Multi-threaded,pypy3 main.py,pypy-multi) || \
-		echo "PyPy not found, skipping..."
-	$(call run_raytracer,python-Raytracer,Python Multi-threaded,python3 main.py,python-multi)
-	$(call stop_powermetrics)
+all-multi: cpp go pypy python$(RESULTS_DIR)
 	@echo ""
 	@echo "========================================="
 	@echo "All multi-threaded implementations completed!"
@@ -229,17 +241,7 @@ all-multi: $(RESULTS_DIR)
 	@ls -lh $(RESULTS_DIR)/*.ppm 2>/dev/null || echo "   No PPM files found"
 	@ls -lh $(RESULTS_DIR)/*.perf 2>/dev/null || echo "   No performance files found"
 
-all-single: $(RESULTS_DIR)
-	@echo "Starting single-threaded benchmark suite..."
-	$(call start_powermetrics)
-	@$(MAKE) cpp-build go-build
-	$(call run_raytracer_single,cpp-RayTracer,C++ Single-threaded,./build/raytracer,cpp-single)
-	$(call run_raytracer_single,go-RayTracer,Go Single-threaded,./ray-tracer,go-single)
-	$(call run_raytracer_single,python-Raytracer,Python Single-threaded,python3 main.py,python-single)
-	@which pypy3 > /dev/null 2>&1 && \
-		$(call run_raytracer_single,python-Raytracer,PyPy Single-threaded,pypy3 main.py,pypy-single) || \
-		echo "PyPy not found, skipping..."
-	$(call stop_powermetrics)
+all-single: cpp-single go-single pypy-single pypthon-single $(RESULTS_DIR)
 	@echo ""
 	@echo "========================================="
 	@echo "All single-threaded implementations completed!"
@@ -287,7 +289,7 @@ clean-power:
 .PHONY: clean clean-builds clean-all stop-power
 
 stop-power:
-	$(call stop_powermetrics)
+	$(call,stop-power stop_powermetrics,manual)
 
 clean:
 	@echo "Cleaning results..."
