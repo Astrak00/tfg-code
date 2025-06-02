@@ -147,7 +147,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # add_compile_options(-Wall -Wextra)
     add_compile_options(-Wnon-virtual-dtor) # Class has virtual functions, but its destructor is not virtual
     add_compile_options(-Wreorder) # Data member will be initialized after [other] data member
-    add_compile_options(-Wsometimes-uninitialized) # Variable improperly initialized
+    add_compile_options(-Wsometimes-uninitialized) # Variable improperly initialized (Clang equivalent)
     add_compile_options(-Wunused-variable) # Variable is defined but unused
 endif()
 

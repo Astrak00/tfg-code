@@ -1,6 +1,7 @@
 #include "rtweekend.h"
 
-#ifdef _OPENMP
+// Only include OpenMP if it's available and enabled
+#if defined(_OPENMP) && defined(ENABLE_OPENMP)
   #include <omp.h>
 #endif
 #include <fstream>
@@ -34,7 +35,7 @@ int main(int argc, char * argv[]) {
         return 1;
       }
     }
-#if defined(_OPENMP)
+#if defined(_OPENMP) && defined(ENABLE_OPENMP)
     else if (arg == "--cores") {
       if (i + 1 < argc) {
         try {
@@ -59,7 +60,7 @@ int main(int argc, char * argv[]) {
     else if (arg == "--help" || arg == "-h") {
       std::cout << "Usage: " << argv[0]
                 << " [--path <sphere_data_path>] [--output <output_ppm_path>]"
-#if defined(_OPENMP)
+#if defined(_OPENMP) && defined(ENABLE_OPENMP)
                 << " [--cores <num_cores>]"
 #endif
                 << "\n";
