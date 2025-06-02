@@ -111,18 +111,24 @@ endef
 # Args: $(1)=directory, $(2)=description, $(3)=command, $(4)=output_name
 define run_raytracer_single
 	@echo ""
-	@echo "Running $(2) (Single-threaded)..."
+	@echo "Running $(2)..."
 	@echo "Directory: $(1)"
 	@echo "Command:   $(3)"
 	@echo "Cores:     1"
 	@echo "========================================="
-	@cd $(1) && { \
+	@start_time=$$(date +%H:%M:%S); \
+	cd $(1) && { \
 		$(PERF_COMMAND) $(3) \
 			--output $(RESULTS_DIR)/$(4).ppm \
 			--cores 1 \
 			--path ../$(SPHERE_DATA); \
-	} 2> $(RESULTS_DIR)/$(4).perf
-	@echo "$(2) completed successfully!"
+	} 2> $(RESULTS_DIR)/$(4).perf; \
+	end_time=$$(date +%H:%M:%S); \
+	echo "$(2) completed successfully!"; \
+	if [ "$(MAC_OS)" = "True" ]; then \
+		echo "$$start_time" > $(RESULTS_DIR)/$(4)_start_time.txt; \
+		echo "$$end_time" > $(RESULTS_DIR)/$(4)_end_time.txt; \
+	fi;
 endef
 
 # =============================================================================
