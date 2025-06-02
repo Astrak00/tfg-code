@@ -3,7 +3,7 @@
 # For metal:      x y z radius metal r g b fuzz
 # For dielectric: x y z radius dielectric index
 c ratio 16 9
-c width 800
+c width 400
 c samplesPerPixel 50
 c maxDepth 50
 c vfov 20
