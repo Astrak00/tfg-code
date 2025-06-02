@@ -14,7 +14,7 @@ set ( CMAKE_CXX_STANDARD_REQUIRED ON )
 set ( CMAKE_CXX_EXTENSIONS        OFF )
 # Keep your hardcoded compiler if needed, otherwise comment out for flexibility
 set ( CMAKE_CXX_COMPILER          "clang++" )
-
+#set ( CMAKE_CXX_COMPILER          "g++" )
 
 # --- Standard Release Flags ---
 # Base flags for optimization, separated for clarity
