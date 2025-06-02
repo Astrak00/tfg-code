@@ -34,10 +34,8 @@ define run_raytracer_single
 	@echo "Command: $(3)"
 	@echo "========================================="
 	@cd $(1) && \
-	{ time $(3) --output ../$(RESULTS_DIR)/$(4).ppm --cores 1 ../$(SPHERE_DATA); } 2> ../$(RESULTS_DIR)/$(4).time
+	{ $(PERF_COMMAND) $(3) --output $(RESULTS_DIR)/$(4).ppm --cores 1 --path ../$(SPHERE_DATA); } 2> $(RESULTS_DIR)/$(4).perf
 	@echo "$(2) completed successfully!"
-	@tail -n 3 $(RESULTS_DIR)/$(4).time > $(RESULTS_DIR)/$(4).time.tmp && \
-	mv $(RESULTS_DIR)/$(4).time.tmp $(RESULTS_DIR)/$(4).time
 	@echo ""
 endef
 
