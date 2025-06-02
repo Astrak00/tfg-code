@@ -135,7 +135,7 @@ all-multi: cpp go pypy python # rust
 	@echo "========================================="
 	@echo "Generated images and timing data:"
 	@ls -lh $(RESULTS_DIR)/*.ppm 2>/dev/null || echo "No PPM files found"
-	@ls -lh $(RESULTS_DIR)/*.time 2>/dev/null || echo "No timing files found"
+	@ls -lh $(RESULTS_DIR)/*.perf 2>/dev/null || echo "No perf/timing files found"
 
 all-single: cpp-single go-single python-single pypy-single # rust-single
 	@echo ""
@@ -144,7 +144,7 @@ all-single: cpp-single go-single python-single pypy-single # rust-single
 	@echo "========================================="
 	@echo "Generated images and timing data:"
 	@ls -lh $(RESULTS_DIR)/*.ppm 2>/dev/null || echo "No PPM files found"
-	@ls -lh $(RESULTS_DIR)/*.time 2>/dev/null || echo "No timing files found"
+	@ls -lh $(RESULTS_DIR)/*.perf 2>/dev/null || echo "No perf/timing files found"
 
 all: all-multi all-single
 	@echo ""
@@ -163,7 +163,7 @@ benchmark: all
 .PHONY: clean clean-builds clean-all
 clean:
 	@echo "Cleaning results..."
-	@rm -rf $(RESULTS_DIR)/*.ppm $(RESULTS_DIR)/*.time 2>/dev/null || true
+	@rm -rf $(RESULTS_DIR)/*.ppm $(RESULTS_DIR)/*.time $(RESULTS_DIR)/*.perf 2>/dev/null || true
 	@echo "Results cleaned."
 
 clean-builds:
