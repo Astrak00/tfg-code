@@ -1,4 +1,4 @@
-#![allow(clippy::only_used_in_recursion)]
+use std::io::stdout;
 
 use std::{
     io::{self, Write},
@@ -215,8 +215,7 @@ impl Camera {
         write!(out, "\rScanlines remaining: 0 ")?;
 
         // Write the image to standard output
-        let mut stdout = std::io::stdout();
-        img.write_to(&mut stdout)?;
+        img.write_to(&mut stdout())?;
 
         writeln!(out, "\rDone.                 ")?;
         Ok(())

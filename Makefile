@@ -4,7 +4,7 @@
 
 # Configuration
 CORES                 ?= 14
-MAC_OS                ?= True
+MAC_OS                ?= False
 RESULTS_DIR           := $(CURDIR)/results-$(CORES)
 SPHERE_DATA           := sphere_data.txt
 POWERMETRICS_PID_FILE := $(RESULTS_DIR)/power/powermetrics.pid
@@ -255,7 +255,7 @@ all-multi: cpp go pypy python $(RESULTS_DIR)
 	@ls -lh $(RESULTS_DIR)/*.ppm 2>/dev/null || echo "   No PPM files found"
 	@ls -lh $(RESULTS_DIR)/*.perf 2>/dev/null || echo "   No performance files found"
 
-all-single: cpp-single go-single pypy-single pypthon-single $(RESULTS_DIR)
+all-single: cpp-single go-single pypy-single python-single $(RESULTS_DIR)
 	@echo ""
 	@echo "========================================="
 	@echo "All single-threaded implementations completed!"
