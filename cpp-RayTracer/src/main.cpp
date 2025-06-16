@@ -1,4 +1,4 @@
-#include "rtweekend.h"
+#include "rtweekend.hpp"
 
 // Only include OpenMP if it's available and enabled
 #if defined(_OPENMP)

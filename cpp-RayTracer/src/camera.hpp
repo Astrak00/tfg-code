@@ -1,9 +1,9 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include "hittable.h"
-#include "image.h"
-#include "material.h"
+#include "hittable.hpp"
+#include "image.hpp"
+#include "material.hpp"
 
 #include <mutex>
 

@@ -51,16 +51,16 @@ inline double random_double(double min, double max) {
 
 // clang-format off
 // NOLINTBEGIN
-#include "color.h"
-#include "interval.h"
-#include "ray.h"
-#include "vec3.h"
+#include "color.hpp"
+#include "interval.hpp"
+#include "ray.hpp"
+#include "vec3.hpp"
 
-#include "camera.h"
-#include "hittable.h"
-#include "hittable_list.h"
-#include "material.h"
-#include "sphere.h"
+#include "camera.hpp"
+#include "hittable.hpp"
+#include "hittable_list.hpp"
+#include "material.hpp"
+#include "sphere.hpp"
 // NOLINTEND
 // clang-format on
 
