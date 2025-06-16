@@ -34,9 +34,7 @@ int main(int argc, char * argv[]) {
         std::cerr << "Error: --output requires a value\n";
         return 1;
       }
-    }
-
-    else if (arg == "--cores") {
+    } else if (arg == "--cores") {
       if (i + 1 < argc) {
         try {
           int cores = std::stoi(argv[i + 1]);

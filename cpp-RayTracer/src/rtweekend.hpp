@@ -1,5 +1,5 @@
-#ifndef RTWEEKEND_H
-#define RTWEEKEND_H
+#ifndef RTWEEKEND_HPP
+#define RTWEEKEND_HPP
 
 #include <cmath>
 #include <cstdlib>
