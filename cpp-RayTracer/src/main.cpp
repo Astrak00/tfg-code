@@ -1,4 +1,4 @@
-#include "rtweekend.h"
+#include "rtweekend.hpp"
 
 // Only include OpenMP if it's available and enabled
 #if defined(_OPENMP)
@@ -34,9 +34,7 @@ int main(int argc, char * argv[]) {
         std::cerr << "Error: --output requires a value\n";
         return 1;
       }
-    }
-
-    else if (arg == "--cores") {
+    } else if (arg == "--cores") {
       if (i + 1 < argc) {
         try {
           int cores = std::stoi(argv[i + 1]);
@@ -172,10 +170,10 @@ int main(int argc, char * argv[]) {
     } else {
       continue;  // Skip unknown material types
     }
-    point3 center(x, y, z);
+    point3 const center(x, y, z);
     world.add(make_shared<sphere>(center, radius, sphere_material));
   }
-  std::cout << "Loaded world from" << sphere_data_path << "\n";
+  std::cout << "Loaded world from " << sphere_data_path << "\n";
   infile.close();
 
   // Create the output path file

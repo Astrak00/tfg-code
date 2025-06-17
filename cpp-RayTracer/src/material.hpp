@@ -1,7 +1,7 @@
-#ifndef MATERIAL_H
-#define MATERIAL_H
+#ifndef MATERIAL_HPP
+#define MATERIAL_HPP
 
-#include "hittable.h"
+#include "hittable.hpp"
 
 class material {
   public:
@@ -60,20 +60,20 @@ class dielectric : public material {
       attenuation = color(1.0, 1.0, 1.0);
       double ri   = rec.front_face ? (1.0 / refraction_index) : refraction_index;
 
-      vec3 unit_direction = unit_vector(r_in.direction());
-      double cos_theta    = std::fmin(dot(-unit_direction, rec.normal), 1.0);
-      double sin_theta    = std::sqrt(1.0 - cos_theta * cos_theta);
+      vec3 const unit_direction = unit_vector(r_in.direction());
+      double const cos_theta    = std::fmin(dot(-unit_direction, rec.normal), 1.0);
+      double const sin_theta    = std::sqrt(1.0 - cos_theta * cos_theta);
 
-      bool cannot_refract = ri * sin_theta > 1.0;
-      vec3 direction;
+      bool const cannot_refract = ri * sin_theta > 1.0;
 
       if (cannot_refract || reflectance(cos_theta, ri) > random_double()) {
-        direction = reflect(unit_direction, rec.normal);
+        vec3 const direction = reflect(unit_direction, rec.normal);
+        scattered            = ray(rec.p, direction);
       } else {
-        direction = refract(unit_direction, rec.normal, ri);
+        vec3 const direction = refract(unit_direction, rec.normal, ri);
+        scattered            = ray(rec.p, direction);
       }
 
-      scattered = ray(rec.p, direction);
       return true;
     }
 
@@ -84,12 +84,12 @@ class dielectric : public material {
 
     static double reflectance(double cosine, double refraction_index) {
       // Use Schlick's approximation for reflectance.
-      auto r0               = (1 - refraction_index) / (1 + refraction_index);
-      r0                    = r0 * r0;
-      double one_minus_cos  = 1.0 - cosine;
-      double one_minus_cos2 = one_minus_cos * one_minus_cos;
-      double one_minus_cos5 = one_minus_cos2 * one_minus_cos2 * one_minus_cos;
-      return r0 + (1 - r0) * one_minus_cos5;
+      auto const r0               = (1 - refraction_index) / (1 + refraction_index);
+      auto const r0_sq            = r0 * r0;
+      double const one_minus_cos  = 1.0 - cosine;
+      double const one_minus_cos2 = one_minus_cos * one_minus_cos;
+      double const one_minus_cos5 = one_minus_cos2 * one_minus_cos2 * one_minus_cos;
+      return r0_sq + (1 - r0_sq) * one_minus_cos5;
     }
 };
 

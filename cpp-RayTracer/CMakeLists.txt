@@ -72,17 +72,17 @@ endif()
 
 # --- Source Files ---
 set ( CPP_RAY_TRACER_SOURCES
-  src/main.cc
-  src/camera.h
-  src/color.h
-  src/hittable.h
-  src/hittable_list.h
-  src/interval.h
-  src/material.h
-  src/ray.h
-  src/rtweekend.h
-  src/sphere.h
-  src/vec3.h
+  src/main.cpp
+  src/camera.hpp
+  src/color.hpp
+  src/hittable.hpp
+  src/hittable_list.hpp
+  src/interval.hpp
+  src/material.hpp
+  src/ray.hpp
+  src/rtweekend.hpp
+  src/sphere.hpp
+  src/vec3.hpp
 )
 
 # Include directory for headers

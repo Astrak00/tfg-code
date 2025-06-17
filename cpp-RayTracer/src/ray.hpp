@@ -1,7 +1,7 @@
-#ifndef RAY_H
-#define RAY_H
+#ifndef RAY_HPP
+#define RAY_HPP
 
-#include "vec3.h"
+#include "vec3.hpp"
 
 class ray {
   public:
@@ -13,7 +13,7 @@ class ray {
 
     vec3 const & direction() const { return dir; }
 
-    point3 at(double t) const { return orig + t * dir; }
+    point3 const at(double t) const { return orig + t * dir; }
 
   private:
     point3 orig;

@@ -1,7 +1,7 @@
-#ifndef IMAGE_H
-#define IMAGE_H
+#ifndef IMAGE_HPP
+#define IMAGE_HPP
 
-#include "color.h"
+#include "color.hpp"
 
 #include <vector>
 
