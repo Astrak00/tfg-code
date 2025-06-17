@@ -2,10 +2,11 @@ import random
 import math
 from ray import Ray
 from vec3 import dot, random_unit_vector, reflect, refract, unit_vector, Color
-from hittable import HitRecord
+from abc import ABC, abstractmethod
 
-class Material:
-    def scatter(self, r_in: Ray, rec: HitRecord) -> tuple[bool, Color, Ray]:
+class Material(ABC):
+    @abstractmethod
+    def scatter(self, r_in: Ray, rec: HitRecord) -> tuple[bool, Color, Ray]: # type: ignore
         """Returns (scatter_happened, attenuation, scattered_ray)"""
         pass
 
@@ -14,7 +15,7 @@ class Lambertian(Material):
     def __init__(self, albedo: Color):
         self.albedo = albedo
 
-    def scatter(self, r_in: Ray, rec: HitRecord) -> tuple[bool, Color, Ray]:
+    def scatter(self, r_in: Ray, rec: HitRecord) -> tuple[bool, Color, Ray]: # type: ignore
         scatter_direction = rec.normal + random_unit_vector()
 
         # Catch degenerate scatter direction
@@ -30,7 +31,7 @@ class Metal(Material):
         self.albedo = albedo
         self.fuzz = min(fuzz, 1.0)
 
-    def scatter(self, r_in: Ray, rec: HitRecord) -> tuple[bool, Color, Ray]:
+    def scatter(self, r_in: Ray, rec: HitRecord) -> tuple[bool, Color, Ray]: # type: ignore
         reflected = reflect(r_in.direction, rec.normal)
         scattered = Ray(rec.p, unit_vector(reflected) + random_unit_vector() * self.fuzz)
         scatter_happened = dot(scattered.direction, rec.normal) > 0
