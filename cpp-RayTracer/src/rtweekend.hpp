@@ -29,12 +29,23 @@ constexpr double pi = std::numbers::pi;
 constexpr double pi = 3.1415926535897932385;
 #endif
 
-// Utility Functions
+/**
+ * @brief Converts an angle from degrees to radians.
+ *
+ * @param degrees Angle in degrees.
+ * @return Angle in radians.
+ */
 
 inline double constexpr degrees_to_radians(double degrees) {
   return degrees * pi / 180.0;
 }
 
+/**
+ * @brief Generates a random double in the range [0, 1).
+ *
+ * Uses a thread-local Mersenne Twister engine for thread-safe random number generation.
+ * @return Random double greater than or equal to 0.0 and less than 1.0.
+ */
 inline double const random_double() {
   thread_local static std::mt19937 generator(
       std::random_device{}() + std::hash<std::thread::id>{}(std::this_thread::get_id()));
@@ -42,6 +53,13 @@ inline double const random_double() {
   return distribution(generator);
 }
 
+/**
+ * @brief Generates a random double in the range [min, max).
+ *
+ * @param min Lower bound of the range, inclusive.
+ * @param max Upper bound of the range, exclusive.
+ * @return double Randomly generated value in [min, max).
+ */
 inline double const random_double(double min, double max) {
   // Returns a random real in [min,max).
   return min + (max - min) * random_double();

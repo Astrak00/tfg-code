@@ -5,9 +5,24 @@
 
 class sphere : public hittable {
   public:
-    sphere(point3 const & center, double radius, shared_ptr<material> mat)
+    /**
+       * @brief Constructs a sphere with the specified center, radius, and material.
+       *
+       * If the provided radius is negative, it is clamped to zero.
+       */
+      sphere(point3 const & center, double radius, shared_ptr<material> mat)
       : center(center), radius(std::fmax(0, radius)), mat(mat) { }
 
+    /**
+     * @brief Determines if a ray intersects the sphere within a given interval.
+     *
+     * If an intersection occurs within the specified ray parameter interval, populates the hit record with intersection details and returns true; otherwise, returns false.
+     *
+     * @param r The ray to test for intersection.
+     * @param ray_t The interval of valid ray parameter values.
+     * @param rec The hit record to populate if an intersection occurs.
+     * @return true if the ray intersects the sphere within the interval; false otherwise.
+     */
     bool hit(ray const & r, interval ray_t, hit_record & rec) const override {
       vec3 const oc  = center - r.origin();
       double const a = r.direction().length_squared();
