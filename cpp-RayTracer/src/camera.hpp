@@ -41,18 +41,18 @@ class camera {
     shared(image, world, lines_remaining, cout_mutex, std::cout) \
     firstprivate(samples_per_pixel, max_depth, image_width, image_height)
       for (int pixel = 0; pixel < image_width * image_height; pixel++) {
-        int i = pixel % image_width;
-        int j = pixel / image_width;
+        int const i = pixel % image_width;
+        int const j = pixel / image_width;
 
         if (i == 0) {
-          int remaining = lines_remaining.fetch_sub(1);
+          int const remaining = lines_remaining.fetch_sub(1);
           std::lock_guard<std::mutex> lock(cout_mutex);
           std::cout << "\rScanlines remaining: " << remaining << ' ' << std::flush;
         }
 
         color pixel_color(0, 0, 0);
         for (int sample = 0; sample < samples_per_pixel; sample++) {
-          ray r        = get_ray(i, j);
+          ray const r  = get_ray(i, j);
           pixel_color += ray_color(r, max_depth, world);
         }
         image.pixel(i, j) = pixel_samples_scale * pixel_color;
