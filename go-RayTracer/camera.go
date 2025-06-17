@@ -138,25 +138,27 @@ func (c *Camera) Render(world Hittable, out io.Writer, numThreads int) {
 		// Create a wait group to synchronize goroutines
 		var wg sync.WaitGroup
 		waitChan := make(chan struct{}, numThreads)
-		processed_lines := 0
+		lines_remaining := c.imageHeight
 
-		for j := range c.imageHeight {
+		for pixel_idx := range c.imageHeight * c.ImageWidth {
 			waitChan <- struct{}{}
 			wg.Add(1)
-			go func(j int) {
+			go func(pixel_idx int) {
 				defer wg.Done()
-				for i := range c.ImageWidth {
-					pixelColor := Color{[3]float64{0, 0, 0}}
-					for range c.SamplesPerPixel {
-						r := c.GetRay(i, j)
-						pixelColor = pixelColor.Add(c.rayColor(r, c.MaxDepth, world))
-					}
-					img.SetPixel(i, j, pixelColor.MulScalar(c.pixelSamplesScale))
+				i := pixel_idx % c.ImageWidth
+				j := pixel_idx / c.ImageWidth
+				pixelColor := Color{[3]float64{0, 0, 0}}
+				for range c.SamplesPerPixel {
+					r := c.GetRay(i, j)
+					pixelColor = pixelColor.Add(c.rayColor(r, c.MaxDepth, world))
 				}
-				processed_lines++
+				img.SetPixel(i, j, pixelColor.MulScalar(c.pixelSamplesScale))
+				if i == 0 {
+					lines_remaining--
+					fmt.Fprintf(os.Stdout, "\rScanlines remaining: %d ", lines_remaining)
+				}
 				<-waitChan
-				fmt.Fprintf(os.Stdout, "\rScanlines remaining: %d ", c.imageHeight-processed_lines)
-			}(j)
+			}(pixel_idx)
 		}
 		wg.Wait()
 	}
