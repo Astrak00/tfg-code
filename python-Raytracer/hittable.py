@@ -1,7 +1,9 @@
 import math
 from vec3 import dot, Point3, Vec3
 from utils import Interval
-
+from ray import Ray
+from utils import Interval
+from material import Lambertian, Metal, Dielectric
 
 class HitRecord:
     def __init__(self):
@@ -11,13 +13,13 @@ class HitRecord:
         self.t = 0.0
         self.front_face = False
 
-    def set_face_normal(self, r, outward_normal):
+    def set_face_normal(self, r: Ray, outward_normal: Vec3) -> None:
         self.front_face = dot(r.direction, outward_normal) < 0
         self.normal = outward_normal if self.front_face else -outward_normal
 
 
 class Hittable:
-    def hit(self, r, ray_t, rec):
+    def hit(self, r: Ray, ray_t: Interval, rec: HitRecord) -> bool:
         """Returns True if hit, updates rec"""
         pass
 
@@ -26,10 +28,10 @@ class HittableList(Hittable):
     def __init__(self):
         self.objects = []
 
-    def add(self, obj):
+    def add(self, obj: 'Sphere') -> None:
         self.objects.append(obj)
 
-    def hit(self, r, ray_t, rec):
+    def hit(self, r: Ray, ray_t: Interval, rec: HitRecord) -> bool:
         hit_anything = False
         closest_so_far = ray_t.max
 
@@ -43,12 +45,12 @@ class HittableList(Hittable):
 
 
 class Sphere(Hittable):
-    def __init__(self, center, radius, material):
+    def __init__(self, center: Vec3, radius: float, material: Lambertian | Metal | Dielectric):
         self.center = center
         self.radius = radius
         self.material = material
 
-    def hit(self, r, ray_t, rec):
+    def hit(self, r: Ray, ray_t: Interval, rec: HitRecord) -> bool:
         oc = r.origin - self.center
         a = r.direction.length_squared()
         half_b = dot(oc, r.direction)

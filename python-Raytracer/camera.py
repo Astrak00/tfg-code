@@ -7,6 +7,7 @@ from vec3 import Color, Point3, Vec3, cross, random_in_unit_disk, unit_vector
 from utils import degrees_to_radians, random_double, INFINITY, Interval
 from image import Image
 from hittable import HitRecord
+from hittable import HittableList
 
 
 class Camera:
@@ -91,7 +92,7 @@ class Camera:
         self.defocus_disk_u = self.u * defocus_radius
         self.defocus_disk_v = self.v * defocus_radius
 
-    def get_ray(self, i, j):
+    def get_ray(self, i: int, j: int) -> Ray:
         """Get a randomly sampled camera ray for the pixel at location i,j"""
         offset = self.sample_square()
         pixel_sample = (
@@ -107,16 +108,16 @@ class Camera:
 
         return Ray(ray_origin, ray_direction)
 
-    def sample_square(self):
+    def sample_square(self) -> Vec3:
         """Returns a random point in the [-0.5,0.5] x [-0.5,0.5] square"""
         return Vec3(random_double() - 0.5, random_double() - 0.5, 0.0)
 
-    def defocus_disk_sample(self):
+    def defocus_disk_sample(self) -> Point3:
         """Returns a random point in the camera defocus disk"""
         p = random_in_unit_disk()
         return self.center + self.defocus_disk_u * p.x() + self.defocus_disk_v * p.y()
 
-    def ray_color(self, r, depth, world):
+    def ray_color(self, r: Ray, depth: int, world: HittableList) -> Color:
         """Calculate the color for a ray"""
         # Base case: ray bounce limit reached
         if depth <= 0:
@@ -135,7 +136,7 @@ class Camera:
         a = 0.5 * (unit_direction.y() + 1.0)
         return Color(1.0, 1.0, 1.0) * (1.0 - a) + Color(0.5, 0.7, 1.0) * a
 
-    def process_row(self, j, world):
+    def process_row(self, j: int, world: HittableList) -> tuple[int, list[Color]]:
         """Process a single row of the image"""
         row_pixels = [Color(0.0, 0.0, 0.0) for _ in range(self.image_width)]
 
@@ -148,7 +149,7 @@ class Camera:
 
         return j, row_pixels
 
-    def render(self, world, out_stream, num_threads=1):
+    def render(self, world: HittableList, out_stream, num_threads=1):
         """Render the scene to the output stream"""
         self.initialize()
 

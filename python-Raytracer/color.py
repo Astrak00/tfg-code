@@ -1,4 +1,5 @@
 import math
+from vec3 import Vec3
 
 
 def linear_to_gamma(linear_component):
@@ -6,7 +7,7 @@ def linear_to_gamma(linear_component):
     return math.sqrt(linear_component) if linear_component > 0.0 else 0.0
 
 
-def clamp(x, min_val, max_val):
+def clamp(x, min_val: int | float, max_val: int | float):
     """Clamp x to the range [min_val, max_val]"""
     if x < min_val:
         return min_val
@@ -16,7 +17,7 @@ def clamp(x, min_val, max_val):
         return x
 
 
-def write_color(file, pixel_color):
+def write_color(file, pixel_color: Vec3):
     """Write the color to the given file stream"""
     # Get components
     r = pixel_color.x()

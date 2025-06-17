@@ -6,5 +6,5 @@ class Ray:
         self.origin = origin
         self.direction = direction
 
-    def at(self, t):
+    def at(self, t: float) -> Vec3:
         return self.origin + self.direction * t

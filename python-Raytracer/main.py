@@ -14,10 +14,6 @@ def create_world_from_file(filepath):
     world = HittableList()
     cam = Camera()
 
-    # Add ground sphere
-    ground_material = Lambertian(Color(0.5, 0.5, 0.5))
-    world.add(Sphere(Point3(0.0, -1000.0, 0.0), 1000.0, ground_material))
-
     # Read spheres from file
     try:
         with open(filepath, "r", encoding="utf-8") as file:
@@ -210,8 +206,8 @@ def main():
         elif sys.argv[i] == "--cores" and i + 1 < len(sys.argv):
             try:
                 num_threads = int(sys.argv[i + 1])
-                if num_threads <= 0:
-                    raise ValueError("Number of cores must be positive")
+                if num_threads < 0:
+                    raise ValueError("Number of cores must be greater than 0 (0 means all available cores)")
             except ValueError as e:
                 print(f"Error: Invalid number of cores specified: {e}")
                 sys.exit(1)

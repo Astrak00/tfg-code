@@ -8,7 +8,7 @@ class Image:
         self.height = height
         self.pixels = [Color(0.0, 0.0, 0.0) for _ in range(width * height)]
 
-    def set_pixel(self, x, y, color):
+    def set_pixel(self, x: int, y: int, color: Color):
         self.pixels[y * self.width + x] = color
 
     def write_to(self, out):
