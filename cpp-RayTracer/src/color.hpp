@@ -6,12 +6,25 @@
 
 using color = vec3;
 
+/**
+ * @brief Converts a linear color component to its gamma-corrected value using gamma 2 correction.
+ *
+ * Applies gamma correction by returning the square root of the input if it is positive; returns 0 for non-positive inputs.
+ *
+ * @param linear_component The linear color component value.
+ * @return double The gamma-corrected color component.
+ */
 inline double linear_to_gamma(double linear_component) {
   if (linear_component > 0) { return std::sqrt(linear_component); }
 
   return 0;
 }
 
+/**
+ * @brief Writes a gamma-corrected color to an output stream in byte format.
+ *
+ * Converts the input color's linear RGB components to gamma-corrected values, clamps them to the [0, 0.999] range, scales to [0, 255], and outputs the resulting integer values as space-separated bytes followed by a newline.
+ */
 void write_color(std::ostream & out, color const & pixel_color) {
   auto const r = pixel_color.x();
   auto const g = pixel_color.y();

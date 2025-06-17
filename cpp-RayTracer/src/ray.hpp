@@ -11,9 +11,20 @@ class ray {
 
     point3 const & origin() const { return orig; }
 
-    vec3 const & direction() const { return dir; }
+    /**
+ * @brief Returns the direction vector of the ray.
+ *
+ * @return Reference to the ray's direction vector.
+ */
+vec3 const & direction() const { return dir; }
 
-    point3 const at(double t) const { return orig + t * dir; }
+    /**
+ * @brief Computes the point along the ray at parameter t.
+ *
+ * @param t Scalar parameter indicating the distance from the ray's origin.
+ * @return point3 The point at origin plus t times the direction vector.
+ */
+point3 const at(double t) const { return orig + t * dir; }
 
   private:
     point3 orig;

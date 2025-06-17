@@ -8,6 +8,19 @@
 #include <sstream>
 #include <string>
 
+/**
+ * @brief Entry point for the sphere renderer application.
+ *
+ * Parses command-line arguments, loads camera and sphere data from a file, configures rendering parameters, and outputs a rendered PPM image. Supports optional OpenMP parallelism if enabled.
+ *
+ * Command-line options:
+ * - `--path <sphere_data_path>`: Path to the input file describing spheres and camera parameters.
+ * - `--output <output_ppm_path>`: Path to the output PPM image file.
+ * - `--cores <num_cores>`: Number of OpenMP threads to use (if OpenMP is enabled).
+ * - `--help` or `-h`: Displays usage information.
+ *
+ * Returns 0 on success, or 1 on error (invalid arguments, file I/O failure, or malformed input).
+ */
 int main(int argc, char * argv[]) {
   // Default path for sphere data
   std::string sphere_data_path = "sphere_data.txt";

@@ -20,7 +20,14 @@ class camera {
     vec3 vup        = vec3(0, 1, 0);     // Camera-relative "up" direction
 
     double defocus_angle = 0;   // Variation angle of rays through each pixel
-    double focus_dist    = 10;  // Distance from camera lookfrom point to plane of perfect focus
+    double focus_dist    = 10;  /**
+     * @brief Renders a 3D scene by ray tracing and writes the resulting image to an output stream.
+     *
+     * Initializes camera parameters, generates rays for each pixel with anti-aliasing and depth of field effects, computes color contributions by tracing rays through the scene, and outputs the final image. Supports parallel rendering if OpenMP is available.
+     *
+     * @param world The scene containing hittable objects to be rendered.
+     * @param out Output stream to which the image is written.
+     */
 
     void render(hittable const & world, std::ostream & out) {
       initialize();
@@ -73,7 +80,11 @@ class camera {
     vec3 pixel_delta_v;          // Offset to pixel below
     vec3 u, v, w;                // Camera frame basis vectors
     vec3 defocus_disk_u;         // Defocus disk horizontal radius
-    vec3 defocus_disk_v;         // Defocus disk vertical radius
+    vec3 defocus_disk_v;         /**
+     * @brief Initializes camera parameters and precomputes vectors for ray generation.
+     *
+     * Computes image dimensions, viewport size, camera coordinate frame, pixel size vectors, upper-left pixel location, and defocus disk vectors for depth of field simulation. This setup is required before rendering an image.
+     */
 
     void initialize() {
       image_height = int(image_width / aspect_ratio);
@@ -112,6 +123,16 @@ class camera {
       defocus_disk_v            = v * defocus_radius;
     }
 
+    /**
+     * @brief Generates a ray from the camera through a randomly sampled point within the specified pixel.
+     *
+     * The ray originates either from the camera center or a random point on the defocus disk (for depth of field),
+     * and is directed toward a randomly offset position within the pixel at coordinates (i, j).
+     *
+     * @param i Horizontal pixel index.
+     * @param j Vertical pixel index.
+     * @return ray Ray originating from the camera and passing through a sampled point in the pixel.
+     */
     ray get_ray(int i, int j) const {
       // Construct a camera ray originating from the defocus disk and directed at a randomly
       // sampled point around the pixel location i, j.
@@ -136,12 +157,27 @@ class camera {
       return radius * random_in_unit_disk();
     }
 
+    /**
+     * @brief Generates a random point on the camera's defocus disk for simulating depth of field.
+     *
+     * @return point3 A point offset from the camera center within the defocus disk.
+     */
     point3 defocus_disk_sample() const {
       // Returns a random point in the camera defocus disk.
       vec3 const p = random_in_unit_disk();
       return center + (p[0] * defocus_disk_u) + (p[1] * defocus_disk_v);
     }
 
+    /**
+     * @brief Recursively computes the color seen along a ray in the scene.
+     *
+     * If the ray hits an object, the function computes the scattered ray and its attenuation based on the material, recursively accumulating color contributions up to the specified depth. If no hit occurs, returns a background gradient color. Returns black if the maximum recursion depth is reached or if the ray does not scatter.
+     *
+     * @param r The ray to trace.
+     * @param depth Maximum recursion depth for ray bounces.
+     * @param world The scene containing hittable objects.
+     * @return color The resulting color for the given ray.
+     */
     color ray_color(ray const & r, int depth, hittable const & world) const {
       // If we've exceeded the ray bounce limit, no more light is gathered.
       if (depth <= 0) { return color(0, 0, 0); }

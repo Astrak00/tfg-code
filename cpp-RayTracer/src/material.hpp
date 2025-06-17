@@ -55,6 +55,17 @@ class dielectric : public material {
   public:
     dielectric(double refraction_index) : refraction_index(refraction_index) { }
 
+    /**
+     * @brief Computes the scattering of a ray through a dielectric (transparent) material.
+     *
+     * Simulates refraction and reflection based on the material's refractive index, using Snell's law and Schlick's approximation to probabilistically determine whether the ray reflects or refracts. The scattered ray is set accordingly, and attenuation is always set to white (no color absorption).
+     *
+     * @param r_in Incoming ray.
+     * @param rec Surface hit record containing intersection details.
+     * @param attenuation Output color attenuation (always set to white).
+     * @param scattered Output scattered ray (either reflected or refracted).
+     * @return true Always returns true, indicating the ray is scattered.
+     */
     bool scatter(ray const & r_in, hit_record const & rec, color & attenuation,
                  ray & scattered) const override {
       attenuation = color(1.0, 1.0, 1.0);
@@ -82,6 +93,15 @@ class dielectric : public material {
     // the refractive index of the enclosing media
     double refraction_index;
 
+    /**
+     * @brief Computes the reflectance using Schlick's approximation.
+     *
+     * Calculates the proportion of light reflected at an interface between two media based on the incident angle cosine and the refractive index.
+     *
+     * @param cosine Cosine of the angle between the incident ray and the surface normal.
+     * @param refraction_index Relative refractive index of the material.
+     * @return double Estimated reflectance (fraction of reflected light).
+     */
     static double reflectance(double cosine, double refraction_index) {
       // Use Schlick's approximation for reflectance.
       auto const r0               = (1 - refraction_index) / (1 + refraction_index);
