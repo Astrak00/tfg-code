@@ -30,8 +30,11 @@ Cargo.lock
 # General
 *.ppm
 *.time
+*.perf
+*.txt
 CMakeFiles/
 results/
+.zip
 
 
 # Profiling

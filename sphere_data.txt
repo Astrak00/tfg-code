@@ -16,7 +16,7 @@ c focusDist 10
 # Ground 
 0 -1000 0 1000 lambertian 0.5 0.5 0.5
 
-
+# 3 Principal Spheres in the middle
 0 1 0 1.0 dielectric 1.5
 -4 1 0 1.0 lambertian 0.4 0.2 0.1
 4 1 0 1.0 metal 0.7 0.6 0.5 0.0
