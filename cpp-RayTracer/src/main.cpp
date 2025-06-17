@@ -170,10 +170,10 @@ int main(int argc, char * argv[]) {
     } else {
       continue;  // Skip unknown material types
     }
-    point3 center(x, y, z);
+    point3 const center(x, y, z);
     world.add(make_shared<sphere>(center, radius, sphere_material));
   }
-  std::cout << "Loaded world from" << sphere_data_path << "\n";
+  std::cout << "Loaded world from " << sphere_data_path << "\n";
   infile.close();
 
   // Create the output path file
