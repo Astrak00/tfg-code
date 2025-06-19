@@ -5,6 +5,7 @@
 # Configuration
 CORES                 ?= 14
 MAC_OS                ?= False
+SERVER 		      ?= False
 RESULTS_DIR           := $(CURDIR)/results-$(CORES)
 SPHERE_DATA           := sphere_data.txt
 POWERMETRICS_PID_FILE := $(RESULTS_DIR)/power/powermetrics.pid
@@ -19,6 +20,23 @@ ifeq ($(MAC_OS),True)
 else
     PERF_COMMAND := perf stat -r 5 -e 'power/energy-pkg/,power/energy-ram/'
 endif
+
+ifeq ($(SERVER), True)
+	# Adjust PERF_COMMAND based on core count
+	ifeq ($(shell [ $(CORES) -le 16 ] && echo true),true)
+	       PERF_COMMAND := $(PERF_COMMAND) taskset -c 0-15
+	else ifeq ($(shell [ $(CORES) -le 32 ] && echo true),true)
+	       #PERF_COMMAND := $(PERF_COMMAND) taskset -c 0-31
+	       PERF_COMMAND := $(PERF_COMMAND) taskset -c 0-15,32-47
+	else ifeq ($(shell [ $(CORES) -le 48 ] && echo true),true)
+	        PERF_COMMAND := $(PERF_COMMAND) taskset -c 0-47
+	#else 
+	#	PERF_COMMAND := $(PERF_COMMAND) taskset -c 0-59
+	endif
+endif
+	
+
+
 
 # =============================================================================
 # Directory Setup
@@ -75,7 +93,9 @@ define stop_powermetrics
 			awk '{print $$3}' > $(POWER_CLEANED_LOG)_$(1).log; \
 		echo "Cleaned data saved to $(POWER_CLEANED_LOG)_$(1).log"; \
 	else \
-		echo "No power metrics log found or not on Mac OS"; \
+		if [ "$(MAC_OS)" = "True" ]; then \
+			echo "No power metrics log found or not on Mac OS"; \
+		fi; \
 	fi
 endef
 
@@ -100,7 +120,7 @@ define run_raytracer
 			--path ../$(SPHERE_DATA); \
 	} 2> $(RESULTS_DIR)/$(4).perf; \
 	end_time=$$(date +%H:%M:%S); \
-	echo "$(2) completed successfully!"; \
+	echo "\n$(2) completed successfully!"; \
 	if [ "$(MAC_OS)" = "True" ]; then \
 		echo "$$start_time" > $(RESULTS_DIR)/$(4)_start_time.txt; \
 		echo "$$end_time" > $(RESULTS_DIR)/$(4)_end_time.txt; \
@@ -211,6 +231,7 @@ go-build:
 	$(call build_go)
 
 go: go-build $(RESULTS_DIR)
+	@echo $(PERF_COMMAND)
 	$(call start_powermetrics,go-multi)
 	$(call run_raytracer,go-RayTracer,Go Multi-threaded,./ray-tracer,go-multi)
 	$(call stop_powermetrics,go-multi)
