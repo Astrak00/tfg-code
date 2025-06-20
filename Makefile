@@ -5,7 +5,7 @@
 # Configuration
 CORES                 ?= 14
 MAC_OS                ?= False
-SERVER 		      ?= False
+SERVER 		      	  ?= False
 RESULTS_DIR           := $(CURDIR)/results-$(CORES)
 SPHERE_DATA           := sphere_data.txt
 POWERMETRICS_PID_FILE := $(RESULTS_DIR)/power/powermetrics.pid
@@ -241,25 +241,6 @@ go-single: go-build $(RESULTS_DIR)
 	$(call run_raytracer_single,go-RayTracer,Go Single-threaded,./ray-tracer,go-single)
 	$(call stop_powermetrics,go-single)
 
-# Rust Implementations
-# .PHONY: rust rust-single rust-build
-# 
-# rust-build:
-# 	@echo "Building Rust ray tracer (Release mode)..."
-# 	@cd rust-Raytracer && cargo build --release
-# 	@echo "Rust build completed"
-
-# rust: rust-build $(RESULTS_DIR)
-# 	$(call start_powermetrics)
-# 	$(call run_raytracer,rust-Raytracer,Rust Multi-threaded,./target/release/ray-tracer,rust-multi)
-# 	$(call stop_powermetrics,rust-multi)
-
-
-# rust-single: rust-build $(RESULTS_DIR)
-# 	$(call start_powermetrics)
-# 	$(call run_raytracer_single,rust-Raytracer,Rust Single-threaded,./target/release/ray-tracer,rust-single)
-# 	$(call stop_powermetrics,rust-single)
-
 
 # =============================================================================
 # Batch Operations
@@ -280,7 +261,7 @@ all-single: cpp-single go-single pypy-single python-single $(RESULTS_DIR)
 	@echo ""
 	@echo "========================================="
 	@echo "All single-threaded implementations completed!"
-	@echo "========================================="	@echo "📊 Generated files:"
+	@echo "========================================="	@echo "Generated files:"
 	@ls -lh $(RESULTS_DIR)/*.ppm 2>/dev/null || echo "   No PPM files found"
 	@ls -lh $(RESULTS_DIR)/*.perf 2>/dev/null || echo "   No performance files found"
 
@@ -388,14 +369,15 @@ help:
 
 info:
 	@echo "Current Configuration:"
-	@echo "  Results Directory: $(RESULTS_DIR)"
-	@echo "  CPU Cores:         $(CORES)"
-	@echo "  Sphere Data:       $(SPHERE_DATA)"
-	@echo "  Current Directory: $(CURDIR)"
-	@echo "  Power Log:         $(POWER_LOG)"
-	@echo "  Cleaned Power Log: $(POWER_CLEANED_LOG)"
-	@echo "  Mac OS Mode:       $(MAC_OS)"
-	@echo "  Performance Tool:  $(PERF_COMMAND)"
+	@echo "  Results Directory: 		$(RESULTS_DIR)"
+	@echo "  CPU Cores:         		$(CORES)"
+	@echo "  Server Mode (taskset):    	$(SERVER)"
+	@echo "  Sphere Data:       		$(SPHERE_DATA)"
+	@echo "  Current Directory: 		$(CURDIR)"
+	@echo "  Power Log:         		$(POWER_LOG)"
+	@echo "  Cleaned Power Log: 		$(POWER_CLEANED_LOG)"
+	@echo "  Mac OS Mode:       		$(MAC_OS)"
+	@echo "  Performance Tool:  		$(PERF_COMMAND)"
 
 # Default target
 .DEFAULT_GOAL := help

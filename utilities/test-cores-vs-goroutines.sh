@@ -90,9 +90,9 @@ echo "nohup perf stat -r 5 -e power/energy-pkg/,power/energy-ram/ taskset -c 0-3
 nohup perf stat -r 5 -e power/energy-pkg/,power/energy-ram/ taskset -c 0-30,32-62 ../ray-tracer --path ../../sphere_data.txt --output go.ppm --cores 120 > "processes 0-30,32-62 --cores-- gorotines 20".log 2>&1 &
 wait
 # 60 cores with 200 threads
-echo "nohup perf stat -r 5 -e power/energy-pkg/,power/energy-ram/ taskset -c 0-30,32-62 ../ray-tracer --path ../../sphere_data.txt --output go.ppm --cores 200 > "processes 0-30,32-62 --cores-- gorotines 00".log 2>&1 &"
-nohup perf stat -r 5 -e power/energy-pkg/,power/energy-ram/ taskset -c 0-30,32-62 ../ray-tracer --path ../../sphere_data.txt --output go.ppm --cores 200 > "processes 0-30,32-62 --cores-- gorotines 00".log 2>&1 &
+echo "nohup perf stat -r 5 -e power/energy-pkg/,power/energy-ram/ taskset -c 0-30,32-62 ../ray-tracer --path ../../sphere_data.txt --output go.ppm --cores 200 > "processes 0-30,32-62 --cores-- gorotines 200".log 2>&1 &"
+nohup perf stat -r 5 -e power/energy-pkg/,power/energy-ram/ taskset -c 0-30,32-62 ../ray-tracer --path ../../sphere_data.txt --output go.ppm --cores 200 > "processes 0-30,32-62 --cores-- gorotines 200".log 2>&1 &
 wait
 # 60 cores with 250 threads
-echo "nohup perf stat -r 5 -e power/energy-pkg/,power/energy-ram/ taskset -c 0-30,32-62 ../ray-tracer --path ../../sphere_data.txt --output go.ppm --cores 250 > "processes 0-30,32-62 --cores-- gorotines 50".log 2>&1 &"
-nohup perf stat -r 5 -e power/energy-pkg/,power/energy-ram/ taskset -c 0-30,32-62 ../ray-tracer --path ../../sphere_data.txt --output go.ppm --cores 250 > "processes 0-30,32-62 --cores-- gorotines 50".log 2>&1 &
+echo "nohup perf stat -r 5 -e power/energy-pkg/,power/energy-ram/ taskset -c 0-30,32-62 ../ray-tracer --path ../../sphere_data.txt --output go.ppm --cores 250 > "processes 0-30,32-62 --cores-- gorotines 250".log 2>&1 &"
+nohup perf stat -r 5 -e power/energy-pkg/,power/energy-ram/ taskset -c 0-30,32-62 ../ray-tracer --path ../../sphere_data.txt --output go.ppm --cores 250 > "processes 0-30,32-62 --cores-- gorotines 250".log 2>&1 &
