@@ -4,12 +4,13 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <cuda_runtime.h>
 
 // CUDA kernel to render the scene
-__global__ void render_kernel(vec3 * fb, int max_x, int max_y, camera * cam, hittable ** world,
+__global__ void render_kernel(vec3 * fb, int max_x, int max_y, camera * cam, hittable * world,
                               curandState * rand_state) {
   int i = threadIdx.x + blockIdx.x * blockDim.x;
   int j = threadIdx.y + blockIdx.y * blockDim.y;
@@ -22,8 +23,8 @@ __global__ void render_kernel(vec3 * fb, int max_x, int max_y, camera * cam, hit
 
   color pixel_color(0, 0, 0);
   for (int sample = 0; sample < cam->samples_per_pixel; sample++) {
-    ray const r  = cam->get_ray(i, j, &local_rand_state);
-    pixel_color += cam->ray_color(r, cam->max_depth, **world, &local_rand_state);
+    ray const r = cam->get_ray(i, j, &local_rand_state);
+    pixel_color += cam->ray_color(r, cam->max_depth, *world, &local_rand_state);
   }
   fb[pixel_index] = pixel_color;
 
@@ -183,10 +184,9 @@ int main(int argc, char * argv[]) {
     *dev_list[i] = *hittable_objects[i];
   }
 
-  hittable_list ** dev_world;
-  cudaMallocManaged(&dev_world, sizeof(hittable_list *));
-  cudaMallocManaged(dev_world, sizeof(hittable_list));
-  *dev_world = new hittable_list(dev_list, hittable_objects.size());
+  hittable * dev_world;
+  cudaMallocManaged(&dev_world, sizeof(hittable_list));
+  *(hittable_list *)dev_world = hittable_list(dev_list, hittable_objects.size());
 
   curandState * dev_rand_state;
   cudaMallocManaged(&dev_rand_state, num_pixels * sizeof(curandState));
@@ -209,21 +209,7 @@ int main(int argc, char * argv[]) {
   for (int j = 0; j < image_height; j++) {
     for (int i = 0; i < cam.image_width; i++) {
       int pixel_index = j * cam.image_width + i;
-      color pixel_color = fb[pixel_index];
-      auto r = pixel_color.x();
-      auto g = pixel_color.y();
-      auto b = pixel_color.z();
-
-      auto r_gamma = linear_to_gamma(r);
-      auto g_gamma = linear_to_gamma(g);
-      auto b_gamma = linear_to_gamma(b);
-
-      static interval const intensity(0.000, 0.999);
-      int const rbyte = int(256 * intensity.clamp(r_gamma));
-      int const gbyte = int(256 * intensity.clamp(g_gamma));
-      int const bbyte = int(256 * intensity.clamp(b_gamma));
-
-      output_ppm_file << rbyte << " " << gbyte << " " << bbyte << "\n";
+      write_color(output_ppm_file, fb[pixel_index], cam.samples_per_pixel);
     }
   }
 
@@ -232,7 +218,6 @@ int main(int argc, char * argv[]) {
   cudaFree(dev_cam);
   for (size_t i = 0; i < hittable_objects.size(); ++i) { cudaFree(dev_list[i]); }
   cudaFree(dev_list);
-  cudaFree(*dev_world);
   cudaFree(dev_world);
   cudaFree(dev_rand_state);
 

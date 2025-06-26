@@ -11,7 +11,7 @@ else
 endif
 
 # Compiler flags
-NVCC_FLAGS=-O3 -std=c++11 -arch=sm_70
+NVCC_FLAGS=-O3 -std=c++17 -arch=sm_70
 
 # Source files
 SRC=src/main.cu

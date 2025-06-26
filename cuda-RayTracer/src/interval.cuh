@@ -21,7 +21,7 @@ class interval {
 
     CUDA_CALLABLE_MEMBER constexpr bool surrounds(double x) const { return min < x && x < max; }
 
-    CUDA_CALLABLE_MEMBER constexpr double clamp(double x) const {
+    CUDA_CALLABLE_MEMBER double clamp(double x) const {
       if (x < min) { return min; }
       if (x > max) { return max; }
       return x;
