@@ -1,138 +1,139 @@
-import { Camera } from './camera';
-import { HittableList } from './hittable_list';
-import { Sphere } from './sphere';
-import { Dielectric, Lambertian, Metal } from './material';
-import { Point3, Vec3 } from './vec3';
-import { promises as fs } from 'fs';
-import * as path from 'path';
+#!/usr/bin/env bun
+import { promises as fs } from "fs";
+import os from "os";
+import { Camera } from "./camera";
+import { HittableList } from "./hittable_list";
+import { createWorldFromFile, randomSceneAndSave, describeWorld } from "./world";
+import { Image } from "./image";
+import { Vec3 } from "./vec3";
 
-type Args = { path: string; output: string; cores?: number };
-
-function parseArgs(argv: string[]): Args {
-  let spherePath = 'sphere_data.txt';
-  let outputPath = 'ts_spheres.ppm';
-  let cores: number | undefined;
-  for (let i = 2; i < argv.length; i++) {
-    const arg = argv[i];
-    if (arg === '--path') {
-      if (i + 1 < argv.length) { spherePath = argv[++i]; }
-      else { throw new Error('--path requires a value'); }
-    } else if (arg === '--output') {
-      if (i + 1 < argv.length) { outputPath = argv[++i]; }
-      else { throw new Error('--output requires a value'); }
-    } else if (arg === '--cores') {
-      if (i + 1 < argv.length) {
-        const c = Number(argv[++i]);
-        if (!Number.isFinite(c) || c <= 0) throw new Error('--cores must be a positive integer');
-        cores = c;
-      } else { throw new Error('--cores requires a value'); }
-    } else if (arg === '--help' || arg === '-h') {
-      console.log(`Usage: node dist/main.js [--path <sphere_data_path>] [--output <output_ppm_path>] [--cores <num_cores>]`);
-      process.exit(0);
-    } else {
-      throw new Error(`Unknown argument: ${arg}`);
+function parseArgs(argv: string[]) {
+  // Support flags: --path <file>, --output <file>, --cores <n>
+  const args: Record<string, string | number | boolean> = {};
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === "--path" || a === "--output" || a === "--cores") {
+      const v = argv[i + 1];
+      i++;
+      if (a === "--cores") args["cores"] = Number(v);
+      else args[a.slice(2)] = v;
+    } else if (a.startsWith("--")) {
+      args[a.slice(2)] = true;
     }
   }
-  return { path: spherePath, output: outputPath, cores };
+  return args as { path?: string; output?: string; cores?: number };
 }
 
-async function buildWorldFromFile(filePath: string, cam: Camera): Promise<HittableList> {
-  const world = new HittableList();
-  const file = await fs.readFile(filePath, 'utf8');
-  const lines = file.split(/\r?\n/);
-  for (let raw of lines) {
-    const line = raw.trim();
-    if (!line || line.startsWith('#')) continue;
-
-    const parts = line.split(/\s+/);
-    if (parts[0] === 'c') {
-      const paramName = parts[1];
-      const vals = parts.slice(2).map(Number);
-      if (paramName === 'ratio' && vals.length >= 2) {
-        cam.aspectRatio = vals[0] / vals[1];
-      } else if (paramName === 'width' && vals.length >= 1) {
-        cam.imageWidth = vals[0];
-      } else if (paramName === 'samplesPerPixel' && vals.length >= 1) {
-        cam.samplesPerPixel = vals[0];
-      } else if (paramName === 'maxDepth' && vals.length >= 1) {
-        cam.maxDepth = vals[0];
-      } else if (paramName === 'vfov' && vals.length >= 1) {
-        cam.vfov = vals[0];
-      } else if (paramName === 'lookFrom' && vals.length >= 3) {
-        cam.lookfrom = new Vec3(vals[0], vals[1], vals[2]);
-      } else if (paramName === 'lookAt' && vals.length >= 3) {
-        cam.lookat = new Vec3(vals[0], vals[1], vals[2]);
-      } else if (paramName === 'vup' && vals.length >= 3) {
-        cam.vup = new Vec3(vals[0], vals[1], vals[2]);
-      } else if (paramName === 'defocusAngle' && vals.length >= 1) {
-        cam.defocusAngle = vals[0];
-      } else if (paramName === 'focusDist' && vals.length >= 1) {
-        cam.focusDist = vals[0];
-      }
-      continue;
-    }
-
-    // sphere line: x y z radius material ...
-    const x = Number(parts[0]);
-    const y = Number(parts[1]);
-    const z = Number(parts[2]);
-    const radius = Number(parts[3]);
-    const materialType = parts[4];
-    let mat;
-    if (materialType === 'lambertian') {
-      const r = Number(parts[5]);
-      const g = Number(parts[6]);
-      const b = Number(parts[7]);
-      mat = new Lambertian(new Vec3(r, g, b));
-    } else if (materialType === 'metal') {
-      const r = Number(parts[5]);
-      const g = Number(parts[6]);
-      const b = Number(parts[7]);
-      const fuzz = Number(parts[8]);
-      mat = new Metal(new Vec3(r, g, b), fuzz);
-    } else if (materialType === 'dielectric') {
-      const idx = Number(parts[5]);
-      mat = new Dielectric(idx);
-    } else {
-      continue;
-    }
-    const center = new Vec3(x, y, z);
-    world.add(new Sphere(center, radius, mat));
+async function ensureWorld(path: string): Promise<{ world: HittableList; cam: Camera }>{
+  try {
+    await fs.access(path);
+    return await createWorldFromFile(path);
+  } catch {
+    console.log(`File ${path} not found. Generating random scene instead.`);
+    await randomSceneAndSave(path);
+    return await createWorldFromFile(path);
   }
-  return world;
 }
 
 async function main() {
-  try {
-    const args = parseArgs(process.argv);
-    const cam = new Camera();
-    // defaults similar to C++ main
+  const { path = "sphere_data.txt", output = "", cores = 0 } = parseArgs(process.argv.slice(2));
+  const numThreads = cores === 0 ? os.cpus()?.length ?? 1 : cores;
+
+  const { world, cam } = await ensureWorld(path);
+  // If camera file lines did not set defaults, mirror Go defaults
+  if (cam.aspectRatio === 1.0 && cam.imageWidth === 100) {
     cam.aspectRatio = 16 / 9;
-    cam.imageWidth = 800;
-    cam.samplesPerPixel = 50;
-    cam.maxDepth = 50;
+    cam.imageWidth = 1200;
+    cam.samplesPerPixel = 10;
+    cam.maxDepth = 10;
     cam.vfov = 20;
-    cam.lookfrom = new Vec3(13, 2, 3);
-    cam.lookat = new Vec3(0, 0, 0);
-    cam.vup = new Vec3(0, 1, 0);
+    cam.lookFrom = new (await import("./vec3")).Vec3([13, 2, 3]);
+    cam.lookAt = new (await import("./vec3")).Vec3([0, 0, 0]);
+    cam.vup = new (await import("./vec3")).Vec3([0, 1, 0]);
     cam.defocusAngle = 0.6;
-    cam.focusDist = 10.0;
+    cam.focusDist = 10;
+  }
 
-    const scenePath = path.isAbsolute(args.path) ? args.path : path.join(process.cwd(), args.path);
-    const world = await buildWorldFromFile(scenePath, cam);
-    console.log(`Loaded world from ${args.path}`);
+  const threads = Math.max(1, (numThreads as number) | 0);
+  console.log("Cores:", threads);
 
-    const image = cam.render(world);
-    const ppm = image.toPPM();
-    const outPath = path.isAbsolute(args.output) ? args.output : path.join(process.cwd(), args.output);
-    await fs.writeFile(outPath, ppm, 'utf8');
-    console.log(`Wrote image to ${outPath}`);
-  } catch (err: any) {
-    console.error(err?.message ?? String(err));
-    process.exit(1);
+  let data = "";
+  if (threads === 1) {
+    data = cam.renderSync(world);
+  } else {
+    // Multi-thread using Bun Workers
+    const width = cam.imageWidth;
+    const height = Math.max(1, Math.floor(cam.imageWidth / cam.aspectRatio));
+    const worldDesc = describeWorld(world);
+    const camDTO = {
+      aspectRatio: cam.aspectRatio,
+      imageWidth: cam.imageWidth,
+      samplesPerPixel: cam.samplesPerPixel,
+      maxDepth: cam.maxDepth,
+      vfov: cam.vfov,
+      lookFrom: [cam.lookFrom.x(), cam.lookFrom.y(), cam.lookFrom.z()] as [number, number, number],
+      lookAt: [cam.lookAt.x(), cam.lookAt.y(), cam.lookAt.z()] as [number, number, number],
+      vup: [cam.vup.x(), cam.vup.y(), cam.vup.z()] as [number, number, number],
+      defocusAngle: cam.defocusAngle,
+      focusDist: cam.focusDist,
+    };
+
+    const image = new Image(width, height);
+    const totalRows = height;
+    let nextRow = 0;
+    let linesRemaining = height;
+
+    const WorkerCtor: any = (globalThis as any).Worker;
+    const mkWorker = () => new WorkerCtor(new URL("./worker.js", import.meta.url), { type: "module" });
+    const workers = Array.from({ length: threads }, () => mkWorker());
+
+    await Promise.all(
+      workers.map(
+        (w) =>
+          new Promise<void>((resolve) => {
+            (w as any).onmessage = (ev: MessageEvent) => {
+              const msg: any = ev.data;
+              if (msg?.type === "row") {
+                const row: number = msg.row;
+                const colors: number[] = msg.colors;
+                for (let i = 0; i < width; i++) {
+                  const idx = i * 3;
+                  const color = new Vec3([colors[idx + 0], colors[idx + 1], colors[idx + 2]]);
+                  image.setPixel(i, row, color);
+                }
+                if (row % 1 === 0) {
+                  linesRemaining--;
+                  process.stdout.write(`\rScanlines remaining: ${linesRemaining} `);
+                }
+                if (nextRow < totalRows) {
+                  (w as any).postMessage({ type: "renderRow", row: nextRow++ });
+                } else {
+                  (w as any).onmessage = null;
+                  (w as any).terminate?.();
+                  resolve();
+                }
+                return;
+              }
+            };
+            (w as any).postMessage({ type: "init", cam: camDTO, world: worldDesc });
+            (w as any).postMessage({ type: "renderRow", row: nextRow++ });
+          })
+      )
+    );
+    process.stdout.write(`\rScanlines remaining: 0 `);
+    data = image.toPPM();
+  }
+
+  if (output && output.length > 0) {
+    await fs.writeFile(output, data, "utf8");
+  } else {
+    process.stdout.write(data);
   }
 }
 
-main();
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
 
 

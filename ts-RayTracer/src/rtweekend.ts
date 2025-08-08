@@ -1,13 +1,10 @@
-// Constants
-export const infinity = Number.POSITIVE_INFINITY;
-export const pi = Math.PI;
+export const InfinityF = Number.POSITIVE_INFINITY;
+export const Pi = Math.PI;
 
-// Utility Functions
 export function degreesToRadians(degrees: number): number {
-  return (degrees * pi) / 180.0;
+  return (degrees * Pi) / 180.0;
 }
 
-// Thread-local randomness is unnecessary in Node; use a per-module RNG
 export function randomDouble(): number {
   return Math.random();
 }

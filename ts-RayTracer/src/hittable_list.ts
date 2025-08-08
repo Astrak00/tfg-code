@@ -1,12 +1,17 @@
-import { Hittable, HitRecord } from './hittable';
-import { Interval } from './interval';
-import { Ray } from './ray';
+import { Interval } from "./interval";
+import { Hittable, HitRecord } from "./hittable";
+import { Ray } from "./ray";
 
 export class HittableList implements Hittable {
-  public objects: Hittable[] = [];
+  objects: Hittable[] = [];
 
-  add(object: Hittable): void { this.objects.push(object); }
-  clear(): void { this.objects = []; }
+  clear() {
+    this.objects = [];
+  }
+
+  add(object: Hittable) {
+    this.objects.push(object);
+  }
 
   hit(r: Ray, rayT: Interval, rec: HitRecord): boolean {
     const tempRec = new HitRecord();
@@ -20,7 +25,6 @@ export class HittableList implements Hittable {
         Object.assign(rec, tempRec);
       }
     }
-
     return hitAnything;
   }
 }

@@ -260,13 +260,35 @@ rust-single: rust-build $(RESULTS_DIR)
 	$(call stop_powermetrics,rust-single)
 
 
+# TypeScript (Bun) Implementations
+.PHONY: ts ts-single ts-build
+
+define build_ts
+    @echo "Building TypeScript ray tracer (Bun)..."
+    @cd ts-RayTracer && bun install --no-progress && bun run build
+    @echo "TypeScript build completed"
+endef
+
+ts-build:
+	$(call build_ts)
+
+ts: ts-build $(RESULTS_DIR)
+	$(call start_powermetrics,ts-multi)
+	$(call run_raytracer,ts-RayTracer,TypeScript (Bun) Multi-threaded,"bun run dist/main.js",ts-multi)
+	$(call stop_powermetrics,ts-multi)
+
+ts-single: ts-build $(RESULTS_DIR)
+	$(call start_powermetrics,ts-single)
+	$(call run_raytracer_single,ts-RayTracer,TypeScript (Bun) Single-threaded,"bun run dist/main.js",ts-single)
+	$(call stop_powermetrics,ts-single)
+
 # =============================================================================
 # Batch Operations
 # =============================================================================
 
 .PHONY: all all-multi all-single benchmark
 
-all-multi: cpp go rust pypy python $(RESULTS_DIR)
+all-multi: cpp go rust pypy python ts $(RESULTS_DIR)
 	@echo ""
 	@echo "========================================="
 	@echo "All multi-threaded implementations completed!"
@@ -275,11 +297,12 @@ all-multi: cpp go rust pypy python $(RESULTS_DIR)
 	@ls -lh $(RESULTS_DIR)/*.ppm 2>/dev/null || echo "   No PPM files found"
 	@ls -lh $(RESULTS_DIR)/*.perf 2>/dev/null || echo "   No performance files found"
 
-all-single: cpp-single go-single rust-single pypy-single python-single $(RESULTS_DIR)
+all-single: cpp-single go-single rust-single pypy-single python-single ts-single $(RESULTS_DIR)
 	@echo ""
 	@echo "========================================="
 	@echo "All single-threaded implementations completed!"
-	@echo "========================================="	@echo "Generated files:"
+	@echo "========================================="
+	@echo "Generated files:"
 	@ls -lh $(RESULTS_DIR)/*.ppm 2>/dev/null || echo "   No PPM files found"
 	@ls -lh $(RESULTS_DIR)/*.perf 2>/dev/null || echo "   No performance files found"
 
@@ -360,6 +383,8 @@ help:
 	@echo "  cpp-single    - Build and run C++ single-threaded implementation"
 	@echo "  go            - Build and run Go multi-threaded implementation"
 	@echo "  go-single     - Build and run Go single-threaded implementation"
+	@echo "  ts            - Build and run TypeScript (Bun) multi-threaded implementation"
+	@echo "  ts-single     - Build and run TypeScript (Bun) single-threaded implementation"
 	@echo ""
 	@echo "Batch Targets:"
 	@echo "  all-multi     - Run all multi-threaded implementations"
@@ -370,6 +395,7 @@ help:
 	@echo "Build Targets:"
 	@echo "  cpp-build     - Build C++ implementation only"
 	@echo "  go-build      - Build Go implementation only"
+	@echo "  ts-build      - Build TypeScript (Bun) implementation only"
 	@echo ""
 	@echo "Utility Targets:"
 	@echo "  ppm-diff      - Build PPM comparison tool"

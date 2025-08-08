@@ -1,68 +1,59 @@
-import { Material, HitRecord } from './hittable';
-import { Ray } from './ray';
-import { Color, Vec3, add, mulScalar, randomUnitVector, reflect, refract, unitVector } from './vec3';
-import { randomDouble } from './rtweekend';
+import { Ray } from "./ray";
+import { HitRecord, Material } from "./hittable";
+import { Color, Vec3, reflect, refract, unitVector, randomUnitVector } from "./vec3";
 
 export class Lambertian implements Material {
-  constructor(private albedo: Color) {}
-
+  constructor(public albedo: Color) {}
   scatter(rIn: Ray, rec: HitRecord) {
-    let scatterDirection = add(rec.normal, randomUnitVector());
+    let scatterDirection = rec.normal.add(randomUnitVector());
     if (scatterDirection.nearZero()) scatterDirection = rec.normal;
     const scattered = new Ray(rec.p, scatterDirection);
     const attenuation = this.albedo;
-    return { attenuation, scattered };
+    return { didScatter: true, attenuation, scattered };
   }
 }
 
 export class Metal implements Material {
-  private fuzz: number;
-  constructor(private albedo: Color, fuzz: number) {
-    this.fuzz = fuzz < 1 ? fuzz : 1;
-  }
-
+  constructor(public albedo: Color, public fuzz: number) {}
   scatter(rIn: Ray, rec: HitRecord) {
-    let reflected = reflect(rIn.direction(), rec.normal);
-    reflected = add(unitVector(reflected), mulScalar(this.fuzz, randomUnitVector()));
-    const scattered = new Ray(rec.p, reflected);
+    const reflected = reflect(unitVector(rIn.direction()), rec.normal);
+    const fuzzClamped = Math.min(this.fuzz, 1.0);
+    const fuzzVector = randomUnitVector().mulScalar(fuzzClamped);
+    const scattered = new Ray(rec.p, reflected.add(fuzzVector));
     const attenuation = this.albedo;
-    if (dot(scattered.direction(), rec.normal) > 0) return { attenuation, scattered };
-    return null;
+    const didScatter = dot(scattered.direction(), rec.normal) > 0;
+    return { didScatter, attenuation, scattered };
   }
 }
 
 export class Dielectric implements Material {
-  constructor(private refractionIndex: number) {}
-
+  constructor(public refractionIndex: number) {}
   scatter(rIn: Ray, rec: HitRecord) {
-    const attenuation = new Vec3(1.0, 1.0, 1.0);
-    const ri = rec.frontFace ? 1.0 / this.refractionIndex : this.refractionIndex;
-
+    const attenuation = new Vec3([1.0, 1.0, 1.0]);
+    const refractionRatio = rec.frontFace ? 1.0 / this.refractionIndex : this.refractionIndex;
     const unitDirection = unitVector(rIn.direction());
-    const cosTheta = Math.min(dot(mulScalar(-1, unitDirection), rec.normal), 1.0);
+    const cosTheta = Math.min(dot(unitDirection.neg(), rec.normal), 1.0);
     const sinTheta = Math.sqrt(1.0 - cosTheta * cosTheta);
-
-    const cannotRefract = ri * sinTheta > 1.0;
+    const cannotRefract = refractionRatio * sinTheta > 1.0;
     let direction: Vec3;
-    if (cannotRefract || reflectance(cosTheta, ri) > randomDouble()) {
+    if (cannotRefract || this.reflectance(cosTheta, refractionRatio) > Math.random()) {
       direction = reflect(unitDirection, rec.normal);
     } else {
-      direction = refract(unitDirection, rec.normal, ri);
+      direction = refract(unitDirection, rec.normal, refractionRatio);
     }
     const scattered = new Ray(rec.p, direction);
-    return { attenuation, scattered };
+    return { didScatter: true, attenuation, scattered };
+  }
+  private reflectance(cosine: number, refIdx: number): number {
+    let r0 = (1.0 - refIdx) / (1.0 + refIdx);
+    r0 = r0 * r0;
+    return r0 + (1.0 - r0) * Math.pow(1.0 - cosine, 5);
   }
 }
 
-function reflectance(cosine: number, refractionIndex: number): number {
-  const r0 = (1 - refractionIndex) / (1 + refractionIndex);
-  const r0sq = r0 * r0;
-  const oneMinusCos = 1.0 - cosine;
-  const oneMinusCos2 = oneMinusCos * oneMinusCos;
-  const oneMinusCos5 = oneMinusCos2 * oneMinusCos2 * oneMinusCos;
-  return r0sq + (1 - r0sq) * oneMinusCos5;
+// local util to avoid cycle
+function dot(u: Vec3, v: Vec3): number {
+  return u.e[0] * v.e[0] + u.e[1] * v.e[1] + u.e[2] * v.e[2];
 }
-
-function dot(u: Vec3, v: Vec3): number { return u.x() * v.x() + u.y() * v.y() + u.z() * v.z(); }
 
 
