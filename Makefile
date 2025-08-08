@@ -274,12 +274,12 @@ ts-build:
 
 ts: ts-build $(RESULTS_DIR)
 	$(call start_powermetrics,ts-multi)
-	$(call run_raytracer,ts-RayTracer,TypeScript (Bun) Multi-threaded,"bun run dist/main.js",ts-multi)
+	$(call run_raytracer,ts-RayTracer,TypeScript (Bun) Multi-threaded,bun run dist/main.js,ts-multi)
 	$(call stop_powermetrics,ts-multi)
 
 ts-single: ts-build $(RESULTS_DIR)
 	$(call start_powermetrics,ts-single)
-	$(call run_raytracer_single,ts-RayTracer,TypeScript (Bun) Single-threaded,"bun run dist/main.js",ts-single)
+	$(call run_raytracer_single,ts-RayTracer,TypeScript (Bun) Single-threaded,bun run dist/main.js,ts-single)
 	$(call stop_powermetrics,ts-single)
 
 # =============================================================================
