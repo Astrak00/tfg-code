@@ -29,28 +29,63 @@ if (ENABLE_OPENMP)
     
     # Special handling for macOS and Clang
     if(APPLE AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        # Check common Homebrew and MacPorts install locations
-        find_library(OPENMP_LIBRARY
-            NAMES omp libomp.dylib
-            PATHS
-                /usr/local/opt/libomp/lib
-                /opt/homebrew/opt/libomp/lib
-                /opt/local/lib
-        )
+        # First, try to query Homebrew for an explicit prefix (Apple Silicon default under /opt/homebrew)
+        set(HOMEBREW_LIBOMP_PREFIX "")
+        find_program(HOMEBREW_EXECUTABLE brew)
+        if(HOMEBREW_EXECUTABLE)
+            execute_process(
+                COMMAND ${HOMEBREW_EXECUTABLE} --prefix libomp
+                OUTPUT_VARIABLE HOMEBREW_LIBOMP_PREFIX
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                ERROR_QUIET
+            )
+        endif()
+
+        # Prefer Homebrew prefix if detected; avoid accidentally picking stale libs from /usr/local
+        if(HOMEBREW_LIBOMP_PREFIX)
+            set(OPENMP_HINT_LIB "${HOMEBREW_LIBOMP_PREFIX}/lib")
+            set(OPENMP_HINT_INC "${HOMEBREW_LIBOMP_PREFIX}/include")
+        else()
+            # Fallback to common locations (Apple Silicon first)
+            set(OPENMP_HINT_LIB 
+                "/opt/homebrew/opt/libomp/lib"
+                "/usr/local/opt/libomp/lib"
+                "/opt/local/lib"
+            )
+            set(OPENMP_HINT_INC 
+                "/opt/homebrew/opt/libomp/include"
+                "/usr/local/opt/libomp/include"
+                "/opt/local/include"
+            )
+        endif()
+
+        # If Apple Silicon Homebrew libomp exists, force it to avoid older Intel /usr/local installs
+        set(_APPLE_SILICON_LIBOMP "/opt/homebrew/opt/libomp/lib/libomp.dylib")
+        if(EXISTS ${_APPLE_SILICON_LIBOMP})
+            set(OPENMP_LIBRARY ${_APPLE_SILICON_LIBOMP})
+        else()
+            # Use HINTS to prioritize our desired locations over system defaults
+            find_library(OPENMP_LIBRARY
+                NAMES omp libomp.dylib
+                HINTS ${OPENMP_HINT_LIB}
+                PATHS ${OPENMP_HINT_LIB}
+            )
+        endif()
         find_path(OPENMP_INCLUDES
             NAMES omp.h
-            PATHS
-                /usr/local/opt/libomp/include
-                /opt/homebrew/opt/libomp/include
-                /opt/local/include
+            HINTS ${OPENMP_HINT_INC}
+            PATHS ${OPENMP_HINT_INC}
         )
-        
+
         if(OPENMP_LIBRARY AND OPENMP_INCLUDES)
             message(STATUS "--> Found OpenMP: ${OPENMP_LIBRARY}")
             set(CMAKE_CXX_FLAGS_RELEASE "${RELEASE_FLAGS} -Xpreprocessor -fopenmp")
             include_directories(${OPENMP_INCLUDES})
             set(OPENMP_LINK_LIBRARIES ${OPENMP_LIBRARY})
             set(OpenMP_CXX_FOUND TRUE)
+            # Ensure runtime can locate libomp when outside default loader paths
+            get_filename_component(_OPENMP_LIB_DIR ${OPENMP_LIBRARY} DIRECTORY)
+            set(_OPENMP_RPATH ${_OPENMP_LIB_DIR})
         else()
             message(STATUS "--> OpenMP not found in standard locations. Please install with: brew install libomp")
         endif()
@@ -123,5 +158,10 @@ if (ENABLE_OPENMP AND OpenMP_CXX_FOUND)
         target_link_libraries(raytracer PUBLIC ${OPENMP_LINK_LIBRARIES})
     else()
         target_link_libraries(raytracer PUBLIC OpenMP::OpenMP_CXX)
+    endif()
+    # Add rpath for Homebrew libomp if we detected a non-system location
+    if(DEFINED _OPENMP_RPATH)
+        message(STATUS "--> Adding rpath: ${_OPENMP_RPATH}")
+        target_link_options(raytracer PRIVATE -Wl,-rpath,${_OPENMP_RPATH})
     endif()
 endif()
