@@ -79,3 +79,7 @@ _markdown_report
 # AI
 libtorch
 build
+
+# TS
+ts-RayTracer/node_modules/
+ts-RayTracer/dist/

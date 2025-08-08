@@ -1,0 +1,18 @@
+{
+  "name": "ts-raytracer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TypeScript ray tracer following the C++ implementation structure",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "bunx tsc -p .",
+    "start": "bun run dist/main.js",
+    "render": "bun run dist/main.js --path ./examples/sphere_data.txt --output ../outputs/ts_spheres.ppm"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.4",
+    "typescript": "^5.5.4"
+  }
+}
+
+
