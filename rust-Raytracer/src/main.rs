@@ -1,378 +1,121 @@
-mod camera;
-mod color;
-mod hittable;
-mod image;
-mod material;
-mod ray;
-mod utils;
-mod vec3;
+use std::env;
+use std::fs::File;
+use std::io::{BufRead, BufReader, Write};
 
-use std::{
-    env,
-    fs::File,
-    io::{self, BufRead, BufReader},
-    path::Path,
-    sync::Arc,
-};
+use ray_tracer::camera::Camera;
+use ray_tracer::color::Color;
+use ray_tracer::hittable::Hittable;
+use ray_tracer::hittable_list::HittableList;
+use ray_tracer::interval::Interval;
+use ray_tracer::material::{Dielectric, Lambertian, Material, Metal};
+use ray_tracer::rtweekend::{INFINITY};
+use ray_tracer::sphere::Sphere;
+use ray_tracer::vec3::{Point3, Vec3};
 
-use camera::Camera;
-use hittable::{HittableList, Sphere};
-use material::{Dielectric, Lambertian, Metal};
-use utils::random_double;
-use vec3::{Color, Point3, Vec3};
+fn check_camera_parameters(cam: &mut Camera, line: &str) {
+    let parts: Vec<&str> = line.split_whitespace().collect();
+    match parts.get(1).copied() {
+        Some("ratio") => {
+            if parts.len() >= 4 {
+                if let (Ok(a), Ok(b)) = (parts[2].parse::<f64>(), parts[3].parse::<f64>()) { cam.aspect_ratio = a/b; }
+            }
+        }
+        Some("width") => { if let Some(v) = parts.get(2) { if let Ok(w) = v.parse::<usize>() { cam.image_width = w; } } }
+        Some("samplesPerPixel") => { if let Some(v) = parts.get(2) { if let Ok(s) = v.parse::<usize>() { cam.samples_per_pixel = s; } } }
+        Some("maxDepth") => { if let Some(v) = parts.get(2) { if let Ok(d) = v.parse::<i32>() { cam.max_depth = d; } } }
+        Some("vfov") => { if let Some(v) = parts.get(2) { if let Ok(f) = v.parse::<f64>() { cam.vfov = f; } } }
+        Some("lookFrom") => { if parts.len() >= 5 { if let (Ok(x),Ok(y),Ok(z))=(parts[2].parse(),parts[3].parse(),parts[4].parse()) { cam.look_from = Vec3([x,y,z]); } } }
+        Some("lookAt") => { if parts.len() >= 5 { if let (Ok(x),Ok(y),Ok(z))=(parts[2].parse(),parts[3].parse(),parts[4].parse()) { cam.look_at = Vec3([x,y,z]); } } }
+        Some("vup") => { if parts.len() >= 5 { if let (Ok(x),Ok(y),Ok(z))=(parts[2].parse(),parts[3].parse(),parts[4].parse()) { cam.vup = Vec3([x,y,z]); } } }
+        Some("defocusAngle") => { if let Some(v) = parts.get(2) { if let Ok(a) = v.parse::<f64>() { cam.defocus_angle = a; } } }
+        Some("focusDist") => { if let Some(v) = parts.get(2) { if let Ok(d) = v.parse::<f64>() { cam.focus_dist = d; } } }
+        _ => {}
+    }
+}
 
-fn create_world_from_file(filepath: &str) -> io::Result<(HittableList, Camera)> {
-    let mut world = HittableList::new();
-    let mut cam = Camera::new();
+fn create_world_from_file(path: &str) -> (HittableList, Camera) {
+    let mut world: HittableList = HittableList { objects: vec![] };
+    let mut cam: Camera = Camera::default();
 
     // Add ground sphere
-    let ground_material = Arc::new(Lambertian::new(Color::new(0.5, 0.5, 0.5)));
-    world.add(Arc::new(Sphere::new(
-        Point3::new(0.0, -1000.0, 0.0),
-        1000.0,
-        ground_material,
-    )));
+    let ground = Lambertian { albedo: Vec3([0.5,0.5,0.5]) };
+    world.add(Box::new(Sphere::new(Vec3([0.0, -1000.0, 0.0]), 1000.0, ground)));
 
-    // Read spheres from file
-    let file = File::open(filepath)?;
-    let reader = BufReader::new(file);
-
-    for line in reader.lines() {
-        let line = line?;
-        // Skip empty lines and comments
-        if line.is_empty() || line.trim().starts_with('#') {
-            continue;
-        }
-
-        let parts: Vec<&str> = line.split_whitespace().collect();
-
-        // Check if this is a camera parameter
-        if parts.len() >= 2 && parts[0] == "c" {
-            match parts[1] {
-                "ratio" if parts.len() >= 4 => {
-                    if let (Ok(width), Ok(height)) =
-                        (parts[2].parse::<f64>(), parts[3].parse::<f64>())
-                    {
-                        cam.aspect_ratio = width / height;
-                    }
-                }
-                "width" if parts.len() >= 3 => {
-                    if let Ok(width) = parts[2].parse::<usize>() {
-                        cam.image_width = width;
-                    }
-                }
-                "samplesPerPixel" if parts.len() >= 3 => {
-                    if let Ok(samples) = parts[2].parse::<usize>() {
-                        cam.samples_per_pixel = samples;
-                    }
-                }
-                "maxDepth" if parts.len() >= 3 => {
-                    if let Ok(depth) = parts[2].parse::<usize>() {
-                        cam.max_depth = depth;
-                    }
-                }
-                "vfov" if parts.len() >= 3 => {
-                    if let Ok(vfov) = parts[2].parse::<f64>() {
-                        cam.vfov = vfov;
-                    }
-                }
-                "lookFrom" if parts.len() >= 5 => {
-                    if let (Ok(x), Ok(y), Ok(z)) = (
-                        parts[2].parse::<f64>(),
-                        parts[3].parse::<f64>(),
-                        parts[4].parse::<f64>(),
-                    ) {
-                        cam.look_from = Point3::new(x, y, z);
-                    }
-                }
-                "lookAt" if parts.len() >= 5 => {
-                    if let (Ok(x), Ok(y), Ok(z)) = (
-                        parts[2].parse::<f64>(),
-                        parts[3].parse::<f64>(),
-                        parts[4].parse::<f64>(),
-                    ) {
-                        cam.look_at = Point3::new(x, y, z);
-                    }
-                }
-                "vup" if parts.len() >= 5 => {
-                    if let (Ok(x), Ok(y), Ok(z)) = (
-                        parts[2].parse::<f64>(),
-                        parts[3].parse::<f64>(),
-                        parts[4].parse::<f64>(),
-                    ) {
-                        cam.vup = Vec3::new(x, y, z);
-                    }
-                }
-                "defocusAngle" if parts.len() >= 3 => {
-                    if let Ok(angle) = parts[2].parse::<f64>() {
-                        cam.defocus_angle = angle;
-                    }
-                }
-                "focusDist" if parts.len() >= 3 => {
-                    if let Ok(dist) = parts[2].parse::<f64>() {
-                        cam.focus_dist = dist;
-                    }
-                }
+    if let Ok(file) = File::open(path) {
+        let reader = BufReader::new(file);
+        for line in reader.lines() {
+            let line = line.unwrap();
+            if line.trim().is_empty() || line.trim_start().starts_with('#') { continue; }
+            if line.starts_with('c') { check_camera_parameters(&mut cam, &line); continue; }
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() < 5 { continue; }
+            let (x, y, z, radius) = match (parts[0].parse::<f64>(), parts[1].parse::<f64>(), parts[2].parse::<f64>(), parts[3].parse::<f64>()) {
+                (Ok(x), Ok(y), Ok(z), Ok(r)) => (x, y, z, r),
                 _ => continue,
+            };
+            let center = Vec3([x,y,z]);
+            match parts[4] {
+                "lambertian" => {
+                    if parts.len() >= 8 { if let (Ok(r),Ok(g),Ok(b))=(parts[5].parse(),parts[6].parse(),parts[7].parse()) { let mat = Lambertian { albedo: Vec3([r,g,b]) }; world.add(Box::new(Sphere::new(center, radius, mat))); } }
+                }
+                "metal" => {
+                    if parts.len() >= 9 { if let (Ok(r),Ok(g),Ok(b),Ok(f))=(parts[5].parse(),parts[6].parse(),parts[7].parse(),parts[8].parse()) { let mat = Metal { albedo: Vec3([r,g,b]), fuzz: f }; world.add(Box::new(Sphere::new(center, radius, mat))); } }
+                }
+                "dielectric" => {
+                    if parts.len() >= 6 { if let Ok(ir) = parts[5].parse::<f64>() { let mat = Dielectric { refraction_index: ir }; world.add(Box::new(Sphere::new(center, radius, mat))); } }
+                }
+                _ => {}
             }
-            continue;
-        }
-
-        if parts.len() < 5 {
-            continue; // Need at least x, y, z, radius, material_type
-        }
-
-        // Parse coordinates and radius
-        let x = parts[0].parse::<f64>().unwrap_or(0.0);
-        let y = parts[1].parse::<f64>().unwrap_or(0.0);
-        let z = parts[2].parse::<f64>().unwrap_or(0.0);
-        let radius = parts[3].parse::<f64>().unwrap_or(0.2);
-        let material_type = parts[4];
-
-        let center = Point3::new(x, y, z);
-
-        // Parse material based on type
-        match material_type {
-            "lambertian" if parts.len() >= 8 => {
-                let r = parts[5].parse::<f64>().unwrap_or(0.5);
-                let g = parts[6].parse::<f64>().unwrap_or(0.5);
-                let b = parts[7].parse::<f64>().unwrap_or(0.5);
-                let material = Arc::new(Lambertian::new(Color::new(r, g, b)));
-                world.add(Arc::new(Sphere::new(center, radius, material)));
-            }
-            "metal" if parts.len() >= 9 => {
-                let r = parts[5].parse::<f64>().unwrap_or(0.5);
-                let g = parts[6].parse::<f64>().unwrap_or(0.5);
-                let b = parts[7].parse::<f64>().unwrap_or(0.5);
-                let fuzz = parts[8].parse::<f64>().unwrap_or(0.0);
-                let material = Arc::new(Metal::new(Color::new(r, g, b), fuzz));
-                world.add(Arc::new(Sphere::new(center, radius, material)));
-            }
-            "dielectric" if parts.len() >= 6 => {
-                let index = parts[5].parse::<f64>().unwrap_or(1.5);
-                let material = Arc::new(Dielectric::new(index));
-                world.add(Arc::new(Sphere::new(center, radius, material)));
-            }
-            _ => continue, // Skip invalid material types or insufficient parameters
         }
     }
-
-    eprintln!("Loaded world from {}", filepath);
-    Ok((world, cam))
+    (world, cam)
 }
 
 fn random_scene() -> HittableList {
-    let mut world = HittableList::new();
-
-    // Ground
-    let ground_material = Arc::new(Lambertian::new(Color::new(0.5, 0.5, 0.5)));
-    world.add(Arc::new(Sphere::new(
-        Point3::new(0.0, -1000.0, 0.0),
-        1000.0,
-        ground_material,
-    )));
-
-    // Small random spheres
-    for a in -11..11 {
-        for b in -11..11 {
-            let choose_mat = random_double();
-            let center = Point3::new(
-                a as f64 + 0.9 * random_double(),
-                0.2,
-                b as f64 + 0.9 * random_double(),
-            );
-
-            if (center - Point3::new(4.0, 0.2, 0.0)).length() > 0.9 {
-                if choose_mat < 0.8 {
-                    // Diffuse
-                    let albedo = Color::new(
-                        random_double() * random_double(),
-                        random_double() * random_double(),
-                        random_double() * random_double(),
-                    );
-                    let sphere_material = Arc::new(Lambertian::new(albedo));
-                    world.add(Arc::new(Sphere::new(center, 0.2, sphere_material)));
-                } else if choose_mat < 0.95 {
-                    // Metal
-                    let albedo = Color::new(
-                        0.5 * (1.0 + random_double()),
-                        0.5 * (1.0 + random_double()),
-                        0.5 * (1.0 + random_double()),
-                    );
-                    let fuzz = 0.5 * random_double();
-                    let sphere_material = Arc::new(Metal::new(albedo, fuzz));
-                    world.add(Arc::new(Sphere::new(center, 0.2, sphere_material)));
-                } else {
-                    // Glass
-                    let sphere_material = Arc::new(Dielectric::new(1.5));
-                    world.add(Arc::new(Sphere::new(center, 0.2, sphere_material)));
-                }
-            }
-        }
-    }
-
-    // Three larger spheres
-    let material1 = Arc::new(Dielectric::new(1.5));
-    world.add(Arc::new(Sphere::new(
-        Point3::new(0.0, 1.0, 0.0),
-        1.0,
-        material1,
-    )));
-
-    let material2 = Arc::new(Lambertian::new(Color::new(0.4, 0.2, 0.1)));
-    world.add(Arc::new(Sphere::new(
-        Point3::new(-4.0, 1.0, 0.0),
-        1.0,
-        material2,
-    )));
-
-    let material3 = Arc::new(Metal::new(Color::new(0.7, 0.6, 0.5), 0.0));
-    world.add(Arc::new(Sphere::new(
-        Point3::new(4.0, 1.0, 0.0),
-        1.0,
-        material3,
-    )));
-
-    // After creating the random scene, also save it to a file
-    if let Ok(mut file) = File::create("sphere_data.txt") {
-        use std::io::Write;
-
-        // Write all the spheres to the file
-        // Small spheres
-        for a in -11..11 {
-            for b in -11..11 {
-                let choose_mat = random_double();
-                let center = Point3::new(
-                    a as f64 + 0.9 * random_double(),
-                    0.2,
-                    b as f64 + 0.9 * random_double(),
-                );
-
-                if (center - Point3::new(4.0, 0.2, 0.0)).length() > 0.9 {
-                    if choose_mat < 0.8 {
-                        // Diffuse
-                        let albedo = Color::new(
-                            random_double() * random_double(),
-                            random_double() * random_double(),
-                            random_double() * random_double(),
-                        );
-                        writeln!(
-                            file,
-                            "{} {} {} {} lambertian {} {} {}",
-                            center.x(),
-                            center.y(),
-                            center.z(),
-                            0.2,
-                            albedo.x(),
-                            albedo.y(),
-                            albedo.z()
-                        )
-                        .ok();
-                    } else if choose_mat < 0.95 {
-                        // Metal
-                        let albedo = Color::new(
-                            0.5 * (1.0 + random_double()),
-                            0.5 * (1.0 + random_double()),
-                            0.5 * (1.0 + random_double()),
-                        );
-                        let fuzz = 0.5 * random_double();
-                        writeln!(
-                            file,
-                            "{} {} {} {} metal {} {} {} {}",
-                            center.x(),
-                            center.y(),
-                            center.z(),
-                            0.2,
-                            albedo.x(),
-                            albedo.y(),
-                            albedo.z(),
-                            fuzz
-                        )
-                        .ok();
-                    } else {
-                        // Glass
-                        writeln!(
-                            file,
-                            "{} {} {} {} dielectric {}",
-                            center.x(),
-                            center.y(),
-                            center.z(),
-                            0.2,
-                            1.5
-                        )
-                        .ok();
-                    }
-                }
-            }
-        }
-
-        // Large spheres
-        writeln!(file, "0.0 1.0 0.0 1.0 dielectric 1.5").ok();
-        writeln!(file, "-4.0 1.0 0.0 1.0 lambertian 0.4 0.2 0.1").ok();
-        writeln!(file, "4.0 1.0 0.0 1.0 metal 0.7 0.6 0.5 0.0").ok();
-    }
-
+    use rand::Rng;
+    let mut rng = rand::thread_rng();
+    let mut world: HittableList = HittableList { objects: vec![] };
+    let ground = Lambertian { albedo: Vec3([0.5,0.5,0.5]) }; world.add(Box::new(Sphere::new(Vec3([0.0,-1000.0,0.0]), 1000.0, ground)));
+    for a in -11..11 { for b in -11..11 { let choose_mat: f64 = rng.gen(); let center = Vec3([a as f64 + 0.9*rng.gen::<f64>(), 0.2, b as f64 + 0.9*rng.gen::<f64>()]); if (center - Vec3([4.0,0.2,0.0])).length() > 0.9 { if choose_mat < 0.8 { let albedo = Vec3([rng.gen(), rng.gen(), rng.gen()]) * Vec3([rng.gen(), rng.gen(), rng.gen()]); let mat = Lambertian { albedo }; world.add(Box::new(Sphere::new(center, 0.2, mat))); } else if choose_mat < 0.95 { let albedo = Vec3([rng.gen_range(0.1..1.0), rng.gen_range(0.1..1.0), rng.gen_range(0.1..1.0)]); let fuzz = rng.gen::<f64>() * 0.5; let mat = Metal { albedo, fuzz }; world.add(Box::new(Sphere::new(center, 0.2, mat))); } else { let mat = Dielectric { refraction_index: 1.5 }; world.add(Box::new(Sphere::new(center, 0.2, mat))); } } } }
+    let material1 = Dielectric { refraction_index: 1.5 }; world.add(Box::new(Sphere::new(Vec3([0.0,1.0,0.0]), 1.0, material1)));
+    let material2 = Lambertian { albedo: Vec3([0.4,0.2,0.1]) }; world.add(Box::new(Sphere::new(Vec3([-4.0,1.0,0.0]), 1.0, material2)));
+    let material3 = Metal { albedo: Vec3([0.7,0.6,0.5]), fuzz: 0.0 }; world.add(Box::new(Sphere::new(Vec3([4.0,1.0,0.0]), 1.0, material3)));
     world
 }
 
-fn main() -> io::Result<()> {
-    // Parse command line arguments
-    let args: Vec<String> = env::args().collect();
-    let default_path = "sphere_data.txt".to_string();
+fn main() {
+    // Defaults
+    let mut filepath = String::from("sphere_data.txt");
+    let mut output_path: Option<String> = None;
+    let mut num_threads: usize = 0;
 
-    let filepath = args
-        .iter()
-        .position(|arg| arg == "--path")
-        .and_then(|pos| args.get(pos + 1).cloned())
-        .unwrap_or(default_path);
-
-    // Default Camera setup
-    let mut cam = Camera::new();
-    cam.aspect_ratio = 16.0 / 9.0;
-    cam.image_width = 800;
-    cam.samples_per_pixel = 50; // Less samples for quicker rendering
-    cam.max_depth = 50;
-    cam.vfov = 20.0;
-    cam.look_from = Point3::new(13.0, 2.0, 3.0);
-    cam.look_at = Point3::new(0.0, 0.0, 0.0);
-    cam.vup = Vec3::new(0.0, 1.0, 0.0);
-    cam.defocus_angle = 0.6;
-    cam.focus_dist = 10.0;
-
-    // Setup world - either from file or randomly generated
-    let world = if Path::new(&filepath).exists() {
-        match create_world_from_file(&filepath) {
-            Ok((w, file_cam)) => {
-                // Use the camera settings from the file
-                cam = file_cam;
-                w
-            }
-            Err(e) => {
-                eprintln!("Error reading from {}: {}", filepath, e);
-                eprintln!("Generating random scene instead.");
-                random_scene()
-            }
+    // Simple CLI parse: --path <file> --output <file> --cores <n>
+    let mut args = env::args().skip(1).collect::<Vec<_>>();
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--path" => { if i+1 < args.len() { filepath = args[i+1].clone(); i+=1; } }
+            "--output" => { if i+1 < args.len() { output_path = Some(args[i+1].clone()); i+=1; } }
+            "--cores" => { if i+1 < args.len() { if let Ok(n) = args[i+1].parse::<usize>() { num_threads = n; } i+=1; } }
+            _ => {}
         }
-    } else {
-        eprintln!(
-            "File {} not found. Generating random scene instead.",
-            filepath
-        );
-        random_scene()
-    };
+        i+=1;
+    }
 
-    // Render the scene
-    let stderr = io::stderr();
-    let mut err_lock = stderr.lock();
+    let (world, mut cam) = create_world_from_file(&filepath);
+    let world = if world.objects.is_empty() { random_scene() } else { world };
 
-    // Use multiple threads for rendering
-    let num_threads = std::env::var("OMP_NUM_THREADS")
-        .ok()
-        .and_then(|val| val.parse::<usize>().ok())
-        .unwrap_or_else(num_cpus::get);
-    // println!("Rendering with {} threads", num_threads);
+    if cam.image_width == 0 { cam.image_width = 1200; }
+    if cam.aspect_ratio == 0.0 { cam.aspect_ratio = 16.0/9.0; }
+    if cam.samples_per_pixel == 0 { cam.samples_per_pixel = 50; }
+    if cam.max_depth == 0 { cam.max_depth = 50; }
+    if cam.vfov == 0.0 { cam.vfov = 20.0; }
+    if cam.focus_dist == 0.0 { cam.focus_dist = 10.0; }
 
-    cam.render(&world, &mut err_lock, num_threads)?;
-
-    Ok(())
+    let mut output: Box<dyn Write> = if let Some(path) = output_path { Box::new(File::create(path).expect("Could not create output file")) } else { Box::new(std::io::stdout()) };
+    if num_threads == 0 { num_threads = num_cpus::get(); }
+    eprintln!("Cores: {}", num_threads);
+    cam.render(&world, &mut output, num_threads).expect("Render failed");
 }
+
+

@@ -1,44 +1,27 @@
-use std::io::{self, Write};
+use std::io::Write;
 
-use crate::vec3::Color;
+use crate::vec3::Vec3;
 
-// Convert linear to gamma (gamma 2)
-pub fn linear_to_gamma(linear_component: f64) -> f64 {
-    if linear_component > 0.0 {
-        linear_component.sqrt()
-    } else {
-        0.0
-    }
-}
+pub type Color = Vec3;
 
-pub fn clamp(x: f64, min: f64, max: f64) -> f64 {
-    if x < min {
-        min
-    } else if x > max {
-        max
-    } else {
-        x
-    }
-}
+fn linear_to_gamma(x: f64) -> f64 { if x > 0.0 { x.sqrt() } else { 0.0 } }
 
-pub fn write_color<W: Write>(out: &mut W, pixel_color: &Color) -> io::Result<()> {
-    // Get components
-    let r = pixel_color.x();
-    let g = pixel_color.y();
-    let b = pixel_color.z();
+pub fn write_color<W: Write>(out: &mut W, pixel_color: Color) -> std::io::Result<()> {
+    let mut r = pixel_color.0[0];
+    let mut g = pixel_color.0[1];
+    let mut b = pixel_color.0[2];
 
-    // Apply gamma correction
-    let r = linear_to_gamma(r);
-    let g = linear_to_gamma(g);
-    let b = linear_to_gamma(b);
+    r = linear_to_gamma(r);
+    g = linear_to_gamma(g);
+    b = linear_to_gamma(b);
 
-    // Translate to [0,255] range
-    let intensity_min = 0.000;
-    let intensity_max = 0.999;
-    let r_byte = (256.0 * clamp(r, intensity_min, intensity_max)) as u8;
-    let g_byte = (256.0 * clamp(g, intensity_min, intensity_max)) as u8;
-    let b_byte = (256.0 * clamp(b, intensity_min, intensity_max)) as u8;
+    let clamp = |x: f64, min: f64, max: f64| if x < min { min } else if x > max { max } else { x };
+    let intensity = (0.0, 0.999);
+    let r_byte = (256.0 * clamp(r, intensity.0, intensity.1)) as i32;
+    let g_byte = (256.0 * clamp(g, intensity.0, intensity.1)) as i32;
+    let b_byte = (256.0 * clamp(b, intensity.0, intensity.1)) as i32;
 
-    // Write the bytes
     writeln!(out, "{} {} {}", r_byte, g_byte, b_byte)
 }
+
+

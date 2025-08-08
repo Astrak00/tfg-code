@@ -1,15 +1,11 @@
 pub mod camera;
 pub mod color;
 pub mod hittable;
+pub mod hittable_list;
 pub mod image;
+pub mod interval;
 pub mod material;
 pub mod ray;
-pub mod utils;
+pub mod rtweekend;
+pub mod sphere;
 pub mod vec3;
-
-// Re-export commonly used items
-pub use camera::Camera;
-pub use hittable::{Hittable, HittableList, Sphere};
-pub use material::{Dielectric, Lambertian, Material, Metal};
-pub use ray::Ray;
-pub use vec3::{Color, Point3, Vec3};

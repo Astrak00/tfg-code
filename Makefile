@@ -241,6 +241,24 @@ go-single: go-build $(RESULTS_DIR)
 	$(call run_raytracer_single,go-RayTracer,Go Single-threaded,./ray-tracer,go-single)
 	$(call stop_powermetrics,go-single)
 
+# Rust Implementations
+.PHONY: rust rust-single rust-build
+
+rust-build:
+	@echo "Building Rust ray tracer..."
+	@cd rust-Raytracer && cargo build --release
+	@echo "Rust build completed"
+
+rust: rust-build $(RESULTS_DIR)
+	$(call start_powermetrics,rust-multi)
+	$(call run_raytracer,rust-Raytracer,Rust Multi-threaded,"./target/release/ray-tracer",rust-multi)
+	$(call stop_powermetrics,rust-multi)
+
+rust-single: rust-build $(RESULTS_DIR)
+	$(call start_powermetrics,rust-single)
+	$(call run_raytracer_single,rust-Raytracer,Rust Single-threaded,"./target/release/ray-tracer",rust-single)
+	$(call stop_powermetrics,rust-single)
+
 
 # =============================================================================
 # Batch Operations
@@ -248,7 +266,7 @@ go-single: go-build $(RESULTS_DIR)
 
 .PHONY: all all-multi all-single benchmark
 
-all-multi: cpp go pypy python $(RESULTS_DIR)
+all-multi: cpp go rust pypy python $(RESULTS_DIR)
 	@echo ""
 	@echo "========================================="
 	@echo "All multi-threaded implementations completed!"
@@ -257,7 +275,7 @@ all-multi: cpp go pypy python $(RESULTS_DIR)
 	@ls -lh $(RESULTS_DIR)/*.ppm 2>/dev/null || echo "   No PPM files found"
 	@ls -lh $(RESULTS_DIR)/*.perf 2>/dev/null || echo "   No performance files found"
 
-all-single: cpp-single go-single pypy-single python-single $(RESULTS_DIR)
+all-single: cpp-single go-single rust-single pypy-single python-single $(RESULTS_DIR)
 	@echo ""
 	@echo "========================================="
 	@echo "All single-threaded implementations completed!"
