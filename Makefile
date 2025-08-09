@@ -14,6 +14,10 @@ POWER_TRIMM_LOG       := $(RESULTS_DIR)/power/powermetrics_trimmed
 POWER_CLEANED_LOG     := $(RESULTS_DIR)/power/powermetrics_cleaned
 POWER_INTERVAL        := 100  # Interval in milliseconds for powermetrics
 
+# CUDA configuration (for NVIDIA GPUs, e.g., RTX 3070 is sm_86)
+NVCC                  ?= nvcc
+CUDA_ARCH             ?= sm_86
+
 # Performance measurement commands
 ifeq ($(MAC_OS),True)
     PERF_COMMAND := date +%H:%M:%S::%M; time
@@ -229,6 +233,25 @@ cpp-single: cpp-build $(RESULTS_DIR)
 	$(call run_raytracer_single,cpp-RayTracer,C++ Single-threaded,./build/raytracer,cpp-single)
 	$(call stop_powermetrics,cpp-single)
 
+# CUDA (NVIDIA) Implementation
+.PHONY: cuda cuda-build
+
+define build_cuda
+	@echo "Building CUDA ray tracer (CUDA/C++)..."
+	@mkdir -p cuda-RayTracer/build
+	@$(NVCC) -O3 -std=c++17 -arch=$(CUDA_ARCH) -use_fast_math \
+		 -o cuda-RayTracer/build/raytracer cuda-RayTracer/main.cu
+	@echo "CUDA build completed"
+endef
+
+cuda-build:
+	$(call build_cuda)
+
+cuda: cuda-build $(RESULTS_DIR)
+	$(call start_powermetrics,cuda)
+	$(call run_raytracer,cuda-RayTracer,CUDA GPU,./build/raytracer,cuda)
+	$(call stop_powermetrics,cuda)
+
 # Go Implementations
 .PHONY: go go-single go-build
 
@@ -365,6 +388,7 @@ help:
 	@echo "  cpp-single    - Build and run C++ single-threaded implementation"
 	@echo "  go            - Build and run Go multi-threaded implementation"
 	@echo "  go-single     - Build and run Go single-threaded implementation"
+	@echo "  cuda          - Build and run CUDA (NVIDIA) implementation"
 	@echo ""
 	@echo "Batch Targets:"
 	@echo "  all-multi     - Run all multi-threaded implementations"
@@ -375,6 +399,7 @@ help:
 	@echo "Build Targets:"
 	@echo "  cpp-build     - Build C++ implementation only"
 	@echo "  go-build      - Build Go implementation only"
+	@echo "  cuda-build    - Build CUDA implementation only"
 	@echo ""
 	@echo "Utility Targets:"
 	@echo "  ppm-diff      - Build PPM comparison tool"
