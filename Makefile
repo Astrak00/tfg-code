@@ -84,13 +84,18 @@ define stop_powermetrics
 			sed -n "/$$start_time/,\$$p" $(POWER_LOG)_$(1).log > $(POWER_TRIMM_LOG)_$(1).log; \
 		else \
 			echo "Start time file not found, using entire log"; \
-			cp $(POWER_LOG) $(POWER_TRIMM_LOG)_$(1).log; \
+			cp $(POWER_LOG)_$(1).log $(POWER_TRIMM_LOG)_$(1).log; \
 		fi; \
 	fi
 	@if [ "$(MAC_OS)" = "True" ] && [ -f $(POWER_TRIMM_LOG)_$(1).log ]; then \
 		echo "Cleaning power metrics data..."; \
-		grep "CPU Power:" $(POWER_TRIMM_LOG)_$(1).log | \
-			awk '{print $$3}' > $(POWER_CLEANED_LOG)_$(1).log; \
+		if [ "$(1)" = "metal" ]; then \
+			grep "GPU Power:" $(POWER_TRIMM_LOG)_$(1).log | \
+				awk '{print $$3}' > $(POWER_CLEANED_LOG)_$(1).log; \
+		else \
+			grep "CPU Power:" $(POWER_TRIMM_LOG)_$(1).log | \
+				awk '{print $$3}' > $(POWER_CLEANED_LOG)_$(1).log; \
+		fi; \
 		echo "Cleaned data saved to $(POWER_CLEANED_LOG)_$(1).log"; \
 	else \
 		if [ "$(MAC_OS)" = "True" ]; then \
@@ -396,6 +401,26 @@ info:
 	@echo "  Cleaned Power Log: 		$(POWER_CLEANED_LOG)"
 	@echo "  Mac OS Mode:       		$(MAC_OS)"
 	@echo "  Performance Tool:  		$(PERF_COMMAND)"
+
+# =============================================================================
+# Metal (macOS) Implementation
+# =============================================================================
+
+.PHONY: metal metal-build
+
+define build_metal
+	@echo "Building Metal ray tracer (Swift/Metal)..."
+	@cd metal-Raytracer && swift build -c release
+	@echo "Metal build completed"
+endef
+
+metal-build:
+	$(call build_metal)
+
+metal: metal-build $(RESULTS_DIR)
+	$(call start_powermetrics,metal)
+	$(call run_raytracer,metal-Raytracer,Metal,./.build/release/metal-raytracer,metal)
+	$(call stop_powermetrics,metal)
 
 # Default target
 .DEFAULT_GOAL := help
