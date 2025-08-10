@@ -239,6 +239,7 @@ cpp-single: cpp-build $(RESULTS_DIR)
 define build_cuda
 	@echo "Building CUDA ray tracer (CUDA/C++)..."
 	@mkdir -p cuda-RayTracer/build
+	@command -v $(NVCC) >/dev/null 2>&1 || { echo "Error: nvcc not found. Please install the CUDA Toolkit and ensure nvcc is on your PATH."; exit 1; }
 	@$(NVCC) -O3 -std=c++17 -arch=$(CUDA_ARCH) -use_fast_math \
 		 -o cuda-RayTracer/build/raytracer cuda-RayTracer/main.cu
 	@echo "CUDA build completed"

@@ -1,4 +1,37 @@
+// If compiled by NVCC, use CUDA runtime; otherwise provide stubs for IDEs
+#include <cstddef>
+#ifdef __CUDACC__
 #include <cuda_runtime.h>
+#else
+// Stubs to satisfy IDE linters when not using NVCC
+#define __host__
+#define __device__
+#define __global__
+using cudaError_t = int;
+static constexpr int cudaSuccess = 0;
+struct cudaDeviceProp
+{
+    char name[256];
+    int major;
+    int minor;
+};
+struct dim3
+{
+    unsigned int x, y, z;
+    dim3(unsigned int X = 1, unsigned int Y = 1, unsigned int Z = 1) : x(X), y(Y), z(Z) {}
+};
+inline const char *cudaGetErrorString(cudaError_t) { return "cuda stub"; }
+inline cudaError_t cudaGetDeviceCount(int *) { return 0; }
+inline cudaError_t cudaSetDevice(int) { return 0; }
+inline cudaError_t cudaGetDeviceProperties(cudaDeviceProp *, int) { return 0; }
+inline cudaError_t cudaMalloc(void **, size_t) { return 0; }
+inline cudaError_t cudaMemcpy(void *, const void *, size_t, int) { return 0; }
+inline cudaError_t cudaDeviceSynchronize() { return 0; }
+inline cudaError_t cudaGetLastError() { return 0; }
+inline cudaError_t cudaFree(void *) { return 0; }
+static constexpr int cudaMemcpyHostToDevice = 1;
+static constexpr int cudaMemcpyDeviceToHost = 2;
+#endif
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
@@ -9,6 +42,15 @@
 #include <sstream>
 #include <iostream>
 #include <algorithm>
+static inline bool checkCuda(cudaError_t err, const char *context)
+{
+    if (err != cudaSuccess)
+    {
+        std::fprintf(stderr, "CUDA error at %s: %s\n", context, cudaGetErrorString(err));
+        return false;
+    }
+    return true;
+}
 
 // ---------------------------------------------
 // Minimal math (float-based for GPU performance)
@@ -111,7 +153,7 @@ __device__ inline Vec3 random_unit_vector(RNG &rng)
         float lsq = x * x + y * y + z * z;
         if (lsq > 1e-16f && lsq <= 1.0f)
         {
-            float inv = rsqrtf(lsq);
+            float inv = 1.0f / sqrtf(lsq);
             return Vec3(x * inv, y * inv, z * inv);
         }
     }
@@ -336,6 +378,7 @@ __device__ inline Ray get_ray(const CameraData &cam, int i, int j, RNG &rng)
 // Kernel
 // ---------------------------------------------
 
+#ifdef __CUDACC__
 __global__ void render_kernel(Vec3 *framebuffer,
                               CameraData cam,
                               const Sphere *spheres, int num_spheres,
@@ -362,6 +405,7 @@ __global__ void render_kernel(Vec3 *framebuffer,
     col.z = col.z > 0.0f ? sqrtf(col.z) : 0.0f;
     framebuffer[idx] = col;
 }
+#endif
 
 // ---------------------------------------------
 // Host utilities
@@ -489,6 +533,28 @@ int main(int argc, char **argv)
             std::cerr << "Error: Unknown argument: " << arg << "\n";
             return 1;
         }
+    }
+
+    // Device checks
+    int device_count = 0;
+    if (!checkCuda(cudaGetDeviceCount(&device_count), "cudaGetDeviceCount"))
+        return 1;
+    if (device_count <= 0)
+    {
+        std::cerr << "No CUDA-capable devices found.\n";
+        return 1;
+    }
+    int device = 0;
+    if (!checkCuda(cudaSetDevice(device), "cudaSetDevice"))
+        return 1;
+    cudaDeviceProp prop{};
+    if (!checkCuda(cudaGetDeviceProperties(&prop, device), "cudaGetDeviceProperties"))
+        return 1;
+    std::cout << "Using CUDA device 0: " << prop.name << " (SM " << prop.major << prop.minor << ")\n";
+    if (prop.major * 10 + prop.minor < 86)
+    {
+        std::cerr << "Warning: Detected compute capability " << prop.major << "." << prop.minor
+                  << ", which is below 8.6 (RTX 3070). The binary may not be optimal or supported.\n";
     }
 
     HostCamera hostCam;
@@ -634,35 +700,70 @@ int main(int argc, char **argv)
     CameraData cam = hostCam.to_device();
 
     // Allocate device memory
-    Vec3 *d_framebuffer = nullptr;
-    Sphere *d_spheres = nullptr;
-    Material *d_materials = nullptr;
-    size_t fb_bytes = (size_t)cam.image_width * (size_t)cam.image_height * sizeof(Vec3);
-    cudaMalloc(&d_framebuffer, fb_bytes);
-    cudaMalloc(&d_spheres, spheres_host.size() * sizeof(Sphere));
-    cudaMalloc(&d_materials, materials_host.size() * sizeof(Material));
-    cudaMemcpy(d_spheres, spheres_host.data(), spheres_host.size() * sizeof(Sphere), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_materials, materials_host.data(), materials_host.size() * sizeof(Material), cudaMemcpyHostToDevice);
+#ifdef __CUDACC__
+    {
+        Vec3 *d_framebuffer = nullptr;
+        Sphere *d_spheres = nullptr;
+        Material *d_materials = nullptr;
+        size_t fb_bytes = (size_t)cam.image_width * (size_t)cam.image_height * sizeof(Vec3);
+        if (!checkCuda(cudaMalloc((void **)&d_framebuffer, fb_bytes), "cudaMalloc framebuffer"))
+            return 1;
+        if (!checkCuda(cudaMalloc((void **)&d_spheres, spheres_host.size() * sizeof(Sphere)), "cudaMalloc spheres"))
+            return 1;
+        if (!checkCuda(cudaMalloc((void **)&d_materials, materials_host.size() * sizeof(Material)), "cudaMalloc materials"))
+            return 1;
+        if (!spheres_host.empty())
+        {
+            if (!checkCuda(cudaMemcpy(d_spheres, spheres_host.data(), spheres_host.size() * sizeof(Sphere), cudaMemcpyHostToDevice), "cudaMemcpy spheres"))
+                return 1;
+        }
+        if (!materials_host.empty())
+        {
+            if (!checkCuda(cudaMemcpy(d_materials, materials_host.data(), materials_host.size() * sizeof(Material), cudaMemcpyHostToDevice), "cudaMemcpy materials"))
+                return 1;
+        }
 
-    // Launch kernel
-    dim3 block(16, 16);
-    dim3 grid((cam.image_width + block.x - 1) / block.x, (cam.image_height + block.y - 1) / block.y);
-    unsigned int seed_base = 1337u;
-    render_kernel<<<grid, block>>>(d_framebuffer, cam, d_spheres, (int)spheres_host.size(), d_materials, seed_base);
-    cudaDeviceSynchronize();
+        // Launch kernel
+        dim3 block(16, 16);
+        dim3 grid((cam.image_width + block.x - 1) / block.x, (cam.image_height + block.y - 1) / block.y);
+        unsigned int seed_base = 1337u;
+        render_kernel<<<grid, block>>>(d_framebuffer, cam, d_spheres, (int)spheres_host.size(), d_materials, seed_base);
+        if (!checkCuda(cudaGetLastError(), "kernel launch"))
+            return 1;
+        if (!checkCuda(cudaDeviceSynchronize(), "cudaDeviceSynchronize"))
+            return 1;
 
-    // Copy back
-    std::vector<Vec3> framebuffer((size_t)cam.image_width * (size_t)cam.image_height);
-    cudaMemcpy(framebuffer.data(), d_framebuffer, fb_bytes, cudaMemcpyDeviceToHost);
+        // Copy back
+        std::vector<Vec3> framebuffer((size_t)cam.image_width * (size_t)cam.image_height);
+        if (!checkCuda(cudaMemcpy(framebuffer.data(), d_framebuffer, fb_bytes, cudaMemcpyDeviceToHost), "cudaMemcpy framebuffer D2H"))
+            return 1;
 
-    // Write PPM
-    write_ppm(output_ppm_path, cam.image_width, cam.image_height, framebuffer);
-    std::cout << "Wrote: " << output_ppm_path << "\n";
+        // Write PPM
+        write_ppm(output_ppm_path, cam.image_width, cam.image_height, framebuffer);
+        std::cout << "Wrote: " << output_ppm_path << "\n";
 
-    // Cleanup
-    cudaFree(d_framebuffer);
-    cudaFree(d_spheres);
-    cudaFree(d_materials);
+        // Cleanup
+        cudaFree(d_framebuffer);
+        cudaFree(d_spheres);
+        cudaFree(d_materials);
+    }
+#else
+    {
+        // CPU-only fallback for non-NVCC builds (IDE lint)
+        std::vector<Vec3> framebuffer((size_t)cam.image_width * (size_t)cam.image_height);
+        for (int y = 0; y < cam.image_height; y++)
+        {
+            for (int x = 0; x < cam.image_width; x++)
+            {
+                float u = (float)x / (float)(cam.image_width - 1);
+                float v = (float)y / (float)(cam.image_height - 1);
+                framebuffer[(size_t)y * cam.image_width + x] = Vec3(u, v, 0.2f);
+            }
+        }
+        write_ppm(output_ppm_path, cam.image_width, cam.image_height, framebuffer);
+        std::cout << "Wrote (CPU fallback): " << output_ppm_path << "\n";
+    }
+#endif
 
     return 0;
 }
