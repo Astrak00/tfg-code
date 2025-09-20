@@ -4,7 +4,7 @@
 
 # Configuration
 CORES                 ?= 14
-MAC_OS                ?= False
+MAC_OS                ?= True
 SERVER 		      	  ?= False
 RESULTS_DIR           := $(CURDIR)/results-$(CORES)
 SPHERE_DATA           := sphere_data.txt
