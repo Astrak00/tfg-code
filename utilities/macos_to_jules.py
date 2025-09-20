@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import argparse
 import sys
 from pathlib import Path
@@ -109,6 +111,7 @@ def main():
             print(f"")
             print(f"Energy Results:")
             print(f"  Total energy: {total_energy:.6f} J")
+            print(f"  Total energy (Wh): {total_energy/3600:.6f} Wh")
             print(f"  Total time: {total_time:.2f} s")
             print(f"  Average power: {total_energy/total_time*1000:.2f} mW")
 

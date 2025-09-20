@@ -13,6 +13,7 @@ POWER_LOG             := $(RESULTS_DIR)/power/powermetrics
 POWER_TRIMM_LOG       := $(RESULTS_DIR)/power/powermetrics_trimmed
 POWER_CLEANED_LOG     := $(RESULTS_DIR)/power/powermetrics_cleaned
 POWER_INTERVAL        := 100  # Interval in milliseconds for powermetrics
+OLLAMA_PROMPT 	      := "Explain the process of making sushi"
 
 # Performance measurement commands
 ifeq ($(MAC_OS),True)
@@ -424,3 +425,16 @@ metal: metal-build $(RESULTS_DIR)
 
 # Default target
 .DEFAULT_GOAL := help
+
+
+.PHONY: ollama-test 
+
+ollama-test:
+	@echo "Running Ollama model test..."
+	@which ollama > /dev/null 2>&1 || { \
+		echo "Error: Ollama CLI not found. Please install Ollama."; \
+		exit 1; \
+	}
+	$(call start_powermetrics,metal)
+	@echo $(OLLAMA_PROMPT) | ollama run gemma3:27b --verbose > $(RESULTS_DIR)/ollama_output.txt
+	$(call stop_powermetrics,metal)
