@@ -62,8 +62,34 @@ if (ENABLE_OPENMP)
             set(CMAKE_CXX_FLAGS_RELEASE "${OpenMP_CXX_FLAGS} ${RELEASE_FLAGS}" )
             set(OPENMP_LINK_LIBRARIES OpenMP::OpenMP_CXX)
         else()
-            message(WARNING "--> OpenMP requested but not found by CMake. Disabling.")
-            set(ENABLE_OPENMP OFF)
+            # CMake's OpenMP module didn't find a usable target. As a fallback,
+            # try locating common libomp shared objects (e.g. libomp.so.5) and
+            # link directly to their absolute path. This helps on systems where
+            # the runtime is installed but the -dev package (providing libomp.so)
+            # is not present.
+            find_library(OPENMP_FALLBACK_LIBRARY
+                NAMES libomp libomp.so.5 libgomp libgomp.so.1
+                PATHS
+                    /lib/x86_64-linux-gnu
+                    /usr/lib/x86_64-linux-gnu
+                    /usr/local/lib
+                    /home/linuxbrew/.linuxbrew/lib
+                    /opt/homebrew/lib
+                    /usr/lib
+            )
+            if (OPENMP_FALLBACK_LIBRARY)
+                message(STATUS "--> Found OpenMP fallback library: ${OPENMP_FALLBACK_LIBRARY}")
+                # Use the fallback library path for linking. Note: this links the
+                # specific SONAME (e.g. libomp.so.5). Installing the -dev package
+                # to provide an unversioned libomp.so is a cleaner solution.
+                set(OPENMP_LINK_LIBRARIES ${OPENMP_FALLBACK_LIBRARY})
+                # Ensure compile flags include -fopenmp for OpenMP pragmas
+                set(CMAKE_CXX_FLAGS_RELEASE "${RELEASE_FLAGS} -fopenmp")
+                set(OpenMP_CXX_FOUND TRUE)
+            else()
+                message(WARNING "--> OpenMP requested but not found by CMake. Disabling.")
+                set(ENABLE_OPENMP OFF)
+            endif()
         endif()
     endif()
 else()

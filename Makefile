@@ -6,6 +6,7 @@
 CORES                 ?= 14
 MAC_OS                ?= False
 SERVER 		      	  ?= False
+DESKTOP 			  ?= False
 RESULTS_DIR           := $(CURDIR)/results-$(CORES)
 SPHERE_DATA           := sphere_data.txt
 POWERMETRICS_PID_FILE := $(RESULTS_DIR)/power/powermetrics.pid
@@ -17,8 +18,10 @@ POWER_INTERVAL        := 100  # Interval in milliseconds for powermetrics
 # Performance measurement commands
 ifeq ($(MAC_OS),True)
     PERF_COMMAND := date +%H:%M:%S::%M; time
-else
+else ifeq ($(SERVER), True)
     PERF_COMMAND := perf stat -r 5 -e 'power/energy-pkg/,power/energy-ram/'
+else ifeq ($(DESKTOP), True)
+	PERF_COMMAND := perf stat -r 5 -e 'power/energy-pkg/'
 endif
 
 ifeq ($(SERVER), True)
