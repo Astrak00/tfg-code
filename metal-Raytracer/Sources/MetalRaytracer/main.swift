@@ -41,9 +41,14 @@ struct App {
             }
         }
 
-        let device = MTLCreateSystemDefaultDevice()!
-        let commandQueue = device.makeCommandQueue()!
-
+        guard let device = MTLCreateSystemDefaultDevice() else {
+            fputs("Error: No Metal device available. This app requires a Metal‑capable Mac.\n", stderr)
+            exit(1)
+        }
+        guard let commandQueue = device.makeCommandQueue() else {
+            fputs("Error: Failed to create Metal command queue.\n", stderr)
+            exit(1)
+        }
         let library: MTLLibrary
         if let defaultLib = try? device.makeDefaultLibrary(bundle: .main) {
             library = defaultLib
